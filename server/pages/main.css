@@ -1,0 +1,40 @@
+#form {
+	background-color: Yellow;
+}
+
+#nav {
+	boder: solid 1px #333;
+	background-color: #fff;
+	width: 100%;
+	height: 40px;
+}
+
+#videos {
+	float: left;
+	width: 300px;
+	background-color: #ccc;
+}
+
+#main {
+	float: left;
+	min-height: 600px;
+	background-color: #ddd;
+	margin-right: 300px;
+	border: 1px Solid Red;
+	width: 600px;
+}
+
+#logs {
+	clear: both;
+	min-height: 200px;
+	background-color: #3c3c3c;
+	color: #c3c3c3;
+}
+
+#rightbar {
+	float: right;
+	width: 200px;
+	min-height: 600px;
+	background-color: #7ea799;
+	color: #d638c1;
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebRTC Test</title>
+	<link rel="stylesheet" href="main.css" />
+</head>
+
+<body>
+
+	<div id="form">
+		
+		<div id="nav">
+			<input id="userNameInput" type="text" placeholder="UserName"></input>
+			<button id="addUserButton">_AddUser</button>
+			<button id="getUsersButton">_GetUsers</button>
+			<button id="getRoomsButton">GetRooms</button>
+			<input id="roomNameInput" type="text" placeholder="RoomName"></input>
+			<button id="createRoomButton">CreateRoom</button>
+			<button id="sendMessageButton2">SendMessage</button>
+		</div>
+		
+		<div id="videos">
+			<video id="localCam" autoplay muted></video>
+			<video id="remoteCam" autoplay></video>
+			<video id="localDesktop" autoplay></video>
+			<video id="remoteDesktop" autoplay></video>
+			<video id="vnc" autoplay></video>
+			<video id="terminal" autoplay></video>
+		</div>
+
+		<div id="main">
+			
+		</div>
+		
+		<div id="rightbar">
+			<div id="roomlist"></div>
+			<div id="userlist"></div>
+		</div>
+		
+		<div id="logs">
+			<input type="text" placeholder="TextMessage" id="messageInput"></input>
+			<button id="sendMessageButton" >SendMessage</button>
+		</div>
+		
+	</div>
+
+	<script src="socket.io/socket.io.js"></script>
+	<script src="adapter.js"></script>
+	<script src="util.js"></script>
+	<script src="client.js"></script>
+
+</body>
+</html>
