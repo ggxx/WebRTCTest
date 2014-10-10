@@ -19,9 +19,9 @@
 	float: left;
 	min-height: 600px;
 	background-color: #ddd;
-	margin-right: 300px;
+	padding-right: 300px;
 	border: 1px Solid Red;
-	width: 600px;
+	width: 400px;
 }
 
 #logs {

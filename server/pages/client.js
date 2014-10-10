@@ -4,8 +4,6 @@
 var USER_ID = guid();
 
 //web控件
-var addUserButton = document.getElementById('addUserButton');
-var getUsersButton = document.getElementById('getUsersButton');
 var getRoomsButton = document.getElementById('getRoomsButton');
 var sendMessageButton = document.getElementById('sendMessageButton');
 var createRoomButton = document.getElementById('createRoomButton');
@@ -35,16 +33,6 @@ function createRoom() {
 	};
 	
 	socket.emit('createroom', message);
-}
-
-function addUser() {
-	var user = { 
-		userid: USER_ID, 
-		username: document.getElementById('userNameInput').value || 'NoNameUser',
-		roomid: 1,
-		ice: { }
-	};
-	socket.emit('adduser', user);
 }
 
 function getUsers(roomid) {
@@ -108,13 +96,28 @@ socket.on('open', function() {
 	});
 
 	// 服务器通知新用户进入房间
-	socket.on('joinroom', function() {
-		
-	});
-
-	// 
-	socket.on('adduser', function() {
-		
+	socket.on('joinroom', function(result) {
+		if (result === true) {
+			var message = {
+				username: 'system',
+				text: '您已成功进入房间'
+			};
+			addTextMessage(message);
+		}
+		else if (result === false) {
+			var message = {
+				username: 'system',
+				text: '进入房间失败'
+			};
+			addTextMessage(message);
+		}
+		else {
+			var message = {
+				username: 'system',
+				text: result + '已进入房间'
+			};
+			addTextMessage(message);
+		}
 	});
 
 	// 
@@ -123,13 +126,31 @@ socket.on('open', function() {
 	});
 
 	// 
-	socket.on('createroom', function() {
-		
+	socket.on('createroom', function(result) {
+		if (result === true) {
+			var message = {
+				username: 'system',
+				text: '您已成功创建房间'
+			};
+			addTextMessage(message);
+		}
+		else {
+			var message = {
+				username: 'system',
+				text: '创建房间失败'
+			};
+			addTextMessage(message);
+		}
 	});
 
 	// 
 	socket.on('closeroom', function() {
 		
+	});
+	
+	// 
+	socket.on('leaveroom', function() {
+		refreshUserListDOM([]);
 	});
 	
 	// 
@@ -163,6 +184,10 @@ function refreshRoomListDOM(rooms) {
 		p.innerHTML += '<button onclick="javascript:leaveRoom(\'' + rooms[i].roomid + '\');">Leave</button>';
 		list.appendChild(p);
 	}
+	if (rooms.length === 0) {
+		var uList = document.getElementById('userlist');
+		uList.innerHTML = '';
+	}
 }
 
 function addTextMessage(message) {
@@ -174,8 +199,6 @@ function addTextMessage(message) {
 
 
 
-//addUserButton.onclick = addUser;
-//getUsersButton.onclick = getUsers;
 getRoomsButton.onclick = getRooms;
 createRoomButton.onclick = createRoom;
 sendMessageButton.onclick = sendMessage;

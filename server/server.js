@@ -4,7 +4,7 @@ var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
 io.set('log level', 1); 
-server.listen(30080);
+server.listen(1986);
 
 app.use(express.logger('dev'));
 app.use(express.cookieParser());
@@ -115,7 +115,7 @@ io.sockets.on('connection', function (socket) {
 		// 加入room
 		socket.join(message.room.roomid);
 		
-		//socket.emit('createroom', true); // 反馈房间创建成功
+		socket.emit('createroom', true); // 反馈房间创建成功
 		io.sockets.emit('rooms', rooms); // 通知所有client，有新房间
 	});
 	
@@ -139,7 +139,8 @@ io.sockets.on('connection', function (socket) {
 		// 加入room
 		socket.join(user.roomid);
 		
-		//socket.emit('joinroom', true); // 反馈房间进入成功
+		socket.emit('joinroom', true); // 反馈房间进入成功
+		io.sockets.in(user.roomid).emit('joinroom', user.username);
 		io.sockets.in(user.roomid).emit('users', getUsersInRoom(user.roomid)); // 通知房间内用户有人加入
 	});
 	
@@ -174,13 +175,13 @@ io.sockets.on('connection', function (socket) {
 		
 		var index = getUserIndex(client.userid);
 		if (index >= 0) {
+			users.splice(index, 1);
 			val = true;
 			var curUsers = getUsersInRoom(client.roomid);
-			if (curUsers.length > 1) {
+			if (curUsers.length > 0) {
 				log('leaveroom: 房间里还有其它人');
 				// 房间里还有人
 				io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
-				users.splice(index, 1);
 			}
 			else {
 				// 房间里无人，关闭房间
@@ -198,7 +199,7 @@ io.sockets.on('connection', function (socket) {
 		client.username = '';
 		client.roomid = '';
 		
-		//socket.emit('leaveroom', val);
+		socket.emit('leaveroom', val);
 	});
 	
 	// 收到文字消息
@@ -219,17 +220,40 @@ io.sockets.on('connection', function (socket) {
 	
 	// 监听出退事件
 	socket.on('disconnect', function () {  
-		/*var obj = {
-			time: getTime(),
-			color: client.color,
-			author: 'System',
-			text: client.name,
-			type: 'disconnect'
-		};
+		
+		if (client.roomid === '') {
+			return;
+		}
 
+		var val = false;
+		
+		// 离开room
+		socket.leave(client.roomid);
+		
+		var index = getUserIndex(client.userid);
+		if (index >= 0) {
+			users.splice(index, 1);
+			val = true;
+			var curUsers = getUsersInRoom(client.roomid);
+			if (curUsers.length > 0) {
+				log('leaveroom: 房间里还有其它人');
+				// 房间里还有人
+				io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
+			}
+			else {
+				// 房间里无人，关闭房间
+				log('leaveroom: 房间里无人，关闭房间');
+				var rIndex = getRoomIndex(client.roomid);
+				if (rIndex >= 0) {
+					rooms.splice(rIndex, 1);
+					io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
+				}
+			}
+		}
+		
 		// 广播用户已退出
-		socket.broadcast.emit('system', obj);
-		console.log(client.name + 'Disconnect');*/
+		//socket.broadcast.emit('system', obj);
+		//console.log(client.name + 'Disconnect');
 	});
 
 });
