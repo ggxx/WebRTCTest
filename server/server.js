@@ -203,19 +203,20 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 收到文字消息
-	socket.on('textmessage', function(message) {
+	socket.on('textmessage', function(text) {
 		
 		log('textmessage');
 		
 		if (client.roomid === '') {
 			return;
 		}
-		
-		log('send message.roomid is ' + message.roomid);
-		
-		message.userid = client.userid;
-		message.username = client.username;
-		io.sockets.in(client.roomid).emit('usertextmessage', message);
+		var message = {
+			time: getTime(),
+			from: client.username,
+			text: text,
+			color: client.color
+		};
+		io.sockets.in(client.roomid).emit('textmessage', message);
 	});
 	
 	// 监听出退事件
@@ -265,13 +266,12 @@ io.sockets.on('disconnect', function () {
 
 
 
-var getTime=function(){
-  var date = new Date();
-  return date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
+function getTime() {
+	var date = new Date();
+	return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 }
 
-var customColor=function(){
-  var colors = ['aliceblue','antiquewhite','aqua','aquamarine','pink','red','green',
-                'orange','blue','blueviolet','brown','burlywood','cadetblue'];
-  return colors[Math.round(Math.random() * 10000 % colors.length)];
+function customColor() { 
+	var colors = ['AliceBlue', 'AntiqueWhite', 'Aqua', 'AquaMarine', 'Pink', 'Red', 'Green', 'Orange', 'Blue', 'BlueViolet', 'Brown', 'Burlywood', 'CadetBlue'];
+	return colors[Math.round(Math.random() * 10000 % colors.length)];
 }

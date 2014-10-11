@@ -66,12 +66,7 @@ function initClient() {
 function sendMessage() {
 	console.log('sendMessage');
 	var text = document.getElementById('messageInput').value || 'nothing';
-	var obj = {
-		userid: '',
-		username: '',
-		text: text
-	};
-	socket.emit('textmessage', obj);
+	socket.emit('textmessage', text);
 }
 
 
@@ -98,25 +93,13 @@ socket.on('open', function() {
 	// 服务器通知新用户进入房间
 	socket.on('joinroom', function(result) {
 		if (result === true) {
-			var message = {
-				username: 'system',
-				text: '您已成功进入房间'
-			};
-			addTextMessage(message);
+			addTextMessage('', 'system', '您已成功进入房间');
 		}
 		else if (result === false) {
-			var message = {
-				username: 'system',
-				text: '进入房间失败'
-			};
-			addTextMessage(message);
+			addTextMessage('', 'system', '进入房间失败');
 		}
 		else {
-			var message = {
-				username: 'system',
-				text: result + '已进入房间'
-			};
-			addTextMessage(message);
+			addTextMessage('', 'system', result + '已进入房间');
 		}
 	});
 
@@ -128,18 +111,10 @@ socket.on('open', function() {
 	// 
 	socket.on('createroom', function(result) {
 		if (result === true) {
-			var message = {
-				username: 'system',
-				text: '您已成功创建房间'
-			};
-			addTextMessage(message);
+			addTextMessage('', 'system', '您已成功创建房间');
 		}
 		else {
-			var message = {
-				username: 'system',
-				text: '创建房间失败'
-			};
-			addTextMessage(message);
+			addTextMessage('', 'system', '创建房间失败');
 		}
 	});
 
@@ -154,9 +129,9 @@ socket.on('open', function() {
 	});
 	
 	// 
-	socket.on('usertextmessage', function(message) {
-		console.log('usertextmessage');
-		addTextMessage(message);
+	socket.on('textmessage', function(message) {
+		console.log('textmessage');
+		addTextMessage(message.time, message.from, message.text, message.color);
 	});
 	
 });
@@ -190,10 +165,13 @@ function refreshRoomListDOM(rooms) {
 	}
 }
 
-function addTextMessage(message) {
+function addTextMessage(time, from, text, color) {
 	var logs = document.getElementById('logs');
 	var p = document.createElement('p');
-	p.innerHTML = message.username + ': ' + message.text;
+	p.innerHTML = time + ' ' + from + ': ' + text;
+	if (color) {
+		p.style.backgroundColor = color;
+	}
 	logs.appendChild(p);
 }
 
