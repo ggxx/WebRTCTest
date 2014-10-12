@@ -86,11 +86,10 @@ io.sockets.on('connection', function (socket) {
 	
 	socket.on('init', function(sessionDescription) {
 		client.sessionDescription = sessionDescription;
-		users[getUserIndex(client.userid)].ice = sessionDescription;
 	});
 	
 	socket.on('call', function(sessionDescription) {
-		socket.emit('call', users[getUserIndex(userid)].ice);
+		socket.emit('call', users[getUserIndex(client.userid)].ice);
 	});
 	
 	// 获取所有room

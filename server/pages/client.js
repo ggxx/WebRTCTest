@@ -9,7 +9,7 @@ var sendMessageButton = document.getElementById('sendMessageButton');
 var createRoomButton = document.getElementById('createRoomButton');
 
 //初始化websocket
-var socket = io.connect('http://192.168.0.99');
+var socket = io.connect('http://localhost');
 
 
 
@@ -27,8 +27,38 @@ var optionalRtpDataChannels = {
 		{ DtlsSrtpKeyAgreement: true }
     ]
 };
+
+
+var rtcSessionDescription;
 var offerer = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
 var offererDataChannel = offerer.createDataChannel('RTCDataChannel', { reliable: false });
+
+offerer.onicecandidate = handleIceCandidate;
+offerer.onaddstream = handleRemoteStreamAdded;
+offerer.onremovestream = handleRemoteStreamRemoved;
+
+
+function handleIceCandidate(event) {
+  console.log('handleIceCandidate event: ', event);
+  if (event.candidate) {
+    sendMessage({
+      type: 'candidate',
+      label: event.candidate.sdpMLineIndex,
+      id: event.candidate.sdpMid,
+      candidate: event.candidate.candidate});
+  } else {
+    console.log('End of candidates.');
+  }
+}
+
+function handleRemoteStreamAdded(event) {
+  console.log('Remote stream added.');
+  remoteVideo.src = window.URL.createObjectURL(event.stream);
+  remoteStream = event.stream;
+}
+
+function handleRemoteStreamRemoved(event) {
+}
 
 setChannelEvents(offererDataChannel, "offerer");
 
@@ -56,12 +86,16 @@ offerer.onicecandidate = function (event) {
 var mediaConstraints = {
     optional: [],
     mandatory: {
-        OfferToReceiveAudio: false, // Hmm!!
-        OfferToReceiveVideo: false // Hmm!!
+        OfferToReceiveAudio: true, // Hehe
+        OfferToReceiveVideo: true // Hehe
     }
 };
 
-offerer.createOffer(function(sessionDescription){ offerer.setLocalDescription(sessionDescription); socket.emit('init', sessionDescription); }, null, mediaConstraints);
+offerer.createOffer( function (sessionDescription) { 
+	rtcSessionDescription = sessionDescription;
+	offerer.setLocalDescription(sessionDescription); 
+	socket.emit('init', sessionDescription); 
+}, null, mediaConstraints);
 
 
 
@@ -78,7 +112,7 @@ function createRoom() {
 		userid: USER_ID,
 		username: document.getElementById('userNameInput').value || 'NoNameUser',
 		roomid: roomId,
-		ice: { }
+		ice: rtcSessionDescription
 	};
 	var message = {
 		room: room,
@@ -102,7 +136,7 @@ function joinRoom(roomid) {
 		userid: USER_ID,
 		username: document.getElementById('userNameInput').value || 'NoNameUser',
 		roomid: roomid,
-		ice: { }
+		ice: rtcSessionDescription
 	};
 	socket.emit('joinroom', user);
 }
@@ -111,9 +145,28 @@ function leaveRoom(roomid) {
 	socket.emit('leaveroom');
 }
 
+function getLocalStream() {
+	var constraints = {video: true};
+	getUserMedia(constraints, handleUserMedia, handleUserMediaError);
+}
+
+function handleUserMedia(stream) {
+	console.log('handleUserMedia');
+	//localVideo.src = window.URL.createObjectURL(stream);
+	//localStream = stream;
+	//sendMessage('got user media');
+    offerer.addStream(stream);
+}
+	
+
+function handleUserMediaError(error) {
+	console.log('handleUserMediaError');
+}
+
 function initClient() {
 	//addUser();
 	getRooms();
+	getLocalStream();
 }
 
 function sendMessage() {
@@ -127,10 +180,19 @@ function call(userid) {
 }
 
 function answer() {
-	
+	offerer.createOffer(setLocalAndSendMessage, handleCreateOfferError);
 }
 
+function setLocalAndSendMessage(sessionDescription) {
+  // Set Opus as the preferred codec in SDP if Opus is present.
+  offerer.setLocalDescription(sessionDescription);
+  console.log('setLocalAndSendMessage sending message' , sessionDescription);
+  //sendMessage(sessionDescription);
+}
 
+function handleCreateOfferError(event){
+  console.log('createOffer() error: ', e);
+}
 
 /////////////////////////////
 
@@ -200,16 +262,19 @@ socket.on('open', function() {
 		addTextMessage(message.time, message.from, message.text, message.color);
 	});
 	
-	socket.on('call', function(offer) {
+	socket.on('call', function(sdp) {
 		console.log('call');
-		offerer.setRemoteDescription(new RTCSessionDescription(offer), function() {
+		offerer.setRemoteDescription(sdp);
+		
+		
+		/*new RTCSessionDescription(offer), function() {
 		offerer.createAnswer(function(answer) {
 		  offerer.setLocalDescription(new RTCSessionDescription(answer), function() {
 			// send the answer to a server to be forwarded back to the caller (you)
 		  }, null);
 		}, null);
 	  }, null);
-	  offererDataChannel.send('hello');
+	  */
 	});
 	
 });
