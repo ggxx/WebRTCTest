@@ -76,12 +76,22 @@ io.sockets.on('connection', function (socket) {
 		userid: '',
 		username: '',
 		roomid: '',
-		color: customColor()
+		color: customColor(),
+		sessionDescription: {}
 	};
 
 	log('on connection');
 	
 	socket.emit('open');
+	
+	socket.on('init', function(sessionDescription) {
+		client.sessionDescription = sessionDescription;
+		users[getUserIndex(client.userid)].ice = sessionDescription;
+	});
+	
+	socket.on('call', function(sessionDescription) {
+		socket.emit('call', users[getUserIndex(userid)].ice);
+	});
 	
 	// 获取所有room
 	socket.on('rooms', function () {

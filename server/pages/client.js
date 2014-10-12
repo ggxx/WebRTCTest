@@ -9,7 +9,60 @@ var sendMessageButton = document.getElementById('sendMessageButton');
 var createRoomButton = document.getElementById('createRoomButton');
 
 //初始化websocket
-var socket = io.connect('http://localhost');
+var socket = io.connect('http://192.168.0.99');
+
+
+
+///////////////////////////////////////////////////////////
+
+//初始化RTCPeerConnection
+var iceServers = {
+    iceServers: [{
+        url: 'stun:stun.l.google.com:19302'
+    }]
+};
+var optionalRtpDataChannels = {
+    optional: [
+        { RtpDataChannels: true },
+		{ DtlsSrtpKeyAgreement: true }
+    ]
+};
+var offerer = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
+var offererDataChannel = offerer.createDataChannel('RTCDataChannel', { reliable: false });
+
+setChannelEvents(offererDataChannel, "offerer");
+
+function setChannelEvents(channel, channelNameForConsoleOutput) {
+    channel.onmessage = function (event) {
+        console.debug(channelNameForConsoleOutput, 'received a message:', event.data);
+    };
+
+    channel.onopen = function () {
+        channel.send('first text message over RTP data ports');
+    };
+    channel.onclose = function (e) {
+        console.error(e);
+    };
+    channel.onerror = function (e) {
+        console.error(e);
+    };
+}
+
+offerer.onicecandidate = function (event) {
+    if (!event || !event.candidate) return;
+    //answerer && answerer.addIceCandidate(event.candidate);
+};
+
+var mediaConstraints = {
+    optional: [],
+    mandatory: {
+        OfferToReceiveAudio: false, // Hmm!!
+        OfferToReceiveVideo: false // Hmm!!
+    }
+};
+
+offerer.createOffer(function(sessionDescription){ offerer.setLocalDescription(sessionDescription); socket.emit('init', sessionDescription); }, null, mediaConstraints);
+
 
 
 ////////////////////////////////////////
@@ -69,12 +122,25 @@ function sendMessage() {
 	socket.emit('textmessage', text);
 }
 
+function call(userid) {
+	socket.emit('call', userid);
+}
+
+function answer() {
+	
+}
+
+
 
 /////////////////////////////
 
 socket.on('open', function() {
 
+
 	initClient();
+	
+	
+
 	
 	console.log('服务器连接成功');
 
@@ -85,7 +151,7 @@ socket.on('open', function() {
 	});
 
 	// 服务器返回房间列表
-	socket.on('rooms', function(rooms) {
+	socket.on('rooms', function(rooms) {		
 		// 更新房间列表
 		refreshRoomListDOM(rooms);
 	});
@@ -134,6 +200,18 @@ socket.on('open', function() {
 		addTextMessage(message.time, message.from, message.text, message.color);
 	});
 	
+	socket.on('call', function(offer) {
+		console.log('call');
+		offerer.setRemoteDescription(new RTCSessionDescription(offer), function() {
+		offerer.createAnswer(function(answer) {
+		  offerer.setLocalDescription(new RTCSessionDescription(answer), function() {
+			// send the answer to a server to be forwarded back to the caller (you)
+		  }, null);
+		}, null);
+	  }, null);
+	  offererDataChannel.send('hello');
+	});
+	
 });
 
 
@@ -145,6 +223,7 @@ function refreshUserListDOM(users) {
 	for (var i = 0; i < users.length; i++) {
 		var p = document.createElement('p');
 		p.innerHTML = users[i].username + ' [' + users[i].userid + ']';
+		p.innerHTML += '<button onclick="javascript:call(\''+ users[i].userid +'\')">Call</button>';
 		list.appendChild(p);
 	}
 }
