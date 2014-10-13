@@ -84,12 +84,16 @@ io.sockets.on('connection', function (socket) {
 	
 	socket.emit('open');
 	
-	socket.on('init', function(sessionDescription) {
-		client.sessionDescription = sessionDescription;
+	socket.on('candidate', function(event) {
+		socket.broadcast.emit('candidate', event);
 	});
 	
-	socket.on('call', function(sessionDescription) {
-		socket.emit('call', users[getUserIndex(client.userid)].ice);
+	socket.on('answer', function(sdp) {
+		socket.broadcast.emit('answer', sdp);
+	});
+	
+	socket.on('offer', function(sdp) {
+		socket.broadcast.emit('offer', sdp);
 	});
 	
 	// 获取所有room

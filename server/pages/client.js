@@ -7,6 +7,8 @@ var USER_ID = guid();
 var getRoomsButton = document.getElementById('getRoomsButton');
 var sendMessageButton = document.getElementById('sendMessageButton');
 var createRoomButton = document.getElementById('createRoomButton');
+var remoteCam = document.getElementById('remoteCam');
+var localCam = document.getElementById('localCam');
 
 //初始化websocket
 var socket = io.connect('http://localhost');
@@ -28,60 +30,36 @@ var optionalRtpDataChannels = {
     ]
 };
 
+var offerSDP, answerSDP;
+var rtcPeerConnection = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
 
-var rtcSessionDescription;
-var offerer = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
-var offererDataChannel = offerer.createDataChannel('RTCDataChannel', { reliable: false });
-
-offerer.onicecandidate = handleIceCandidate;
-offerer.onaddstream = handleRemoteStreamAdded;
-offerer.onremovestream = handleRemoteStreamRemoved;
+rtcPeerConnection.onicecandidate = handleIceCandidate;
+rtcPeerConnection.onaddstream = handleRemoteStreamAdded;
+rtcPeerConnection.onremovestream = handleRemoteStreamRemoved;
 
 
 function handleIceCandidate(event) {
-  console.log('handleIceCandidate event: ', event);
-  if (event.candidate) {
-    sendMessage({
-      type: 'candidate',
-      label: event.candidate.sdpMLineIndex,
-      id: event.candidate.sdpMid,
-      candidate: event.candidate.candidate});
-  } else {
-    console.log('End of candidates.');
-  }
+	console.log('handleIceCandidate event: ', event);
+	if (event.candidate) {
+		var candidate = {
+			type: 'candidate',
+			label: event.candidate.sdpMLineIndex,
+			id: event.candidate.sdpMid,
+			candidate: event.candidate.candidate };
+		socket.emit('candidate', candidate);
+	} else {
+		console.log('End of candidates.');
+	}
 }
 
 function handleRemoteStreamAdded(event) {
-  console.log('Remote stream added.');
-  remoteVideo.src = window.URL.createObjectURL(event.stream);
-  remoteStream = event.stream;
+	console.log('handleRemoteStreamAdded');
+	attachMediaStream(remoteCam, event.stream);
 }
 
 function handleRemoteStreamRemoved(event) {
+	console.log('handleRemoteStreamRemoved');
 }
-
-setChannelEvents(offererDataChannel, "offerer");
-
-function setChannelEvents(channel, channelNameForConsoleOutput) {
-    channel.onmessage = function (event) {
-        console.debug(channelNameForConsoleOutput, 'received a message:', event.data);
-    };
-
-    channel.onopen = function () {
-        channel.send('first text message over RTP data ports');
-    };
-    channel.onclose = function (e) {
-        console.error(e);
-    };
-    channel.onerror = function (e) {
-        console.error(e);
-    };
-}
-
-offerer.onicecandidate = function (event) {
-    if (!event || !event.candidate) return;
-    //answerer && answerer.addIceCandidate(event.candidate);
-};
 
 var mediaConstraints = {
     optional: [],
@@ -90,12 +68,6 @@ var mediaConstraints = {
         OfferToReceiveVideo: true // Hehe
     }
 };
-
-offerer.createOffer( function (sessionDescription) { 
-	rtcSessionDescription = sessionDescription;
-	offerer.setLocalDescription(sessionDescription); 
-	socket.emit('init', sessionDescription); 
-}, null, mediaConstraints);
 
 
 
@@ -112,7 +84,7 @@ function createRoom() {
 		userid: USER_ID,
 		username: document.getElementById('userNameInput').value || 'NoNameUser',
 		roomid: roomId,
-		ice: rtcSessionDescription
+		ice: {}
 	};
 	var message = {
 		room: room,
@@ -136,7 +108,7 @@ function joinRoom(roomid) {
 		userid: USER_ID,
 		username: document.getElementById('userNameInput').value || 'NoNameUser',
 		roomid: roomid,
-		ice: rtcSessionDescription
+		ice: {}
 	};
 	socket.emit('joinroom', user);
 }
@@ -152,10 +124,8 @@ function getLocalStream() {
 
 function handleUserMedia(stream) {
 	console.log('handleUserMedia');
-	//localVideo.src = window.URL.createObjectURL(stream);
-	//localStream = stream;
-	//sendMessage('got user media');
-    offerer.addStream(stream);
+	attachMediaStream(localCam, stream);
+    rtcPeerConnection.addStream(stream);
 }
 	
 
@@ -176,23 +146,39 @@ function sendMessage() {
 }
 
 function call(userid) {
-	socket.emit('call', userid);
+	console.log('call', userid);
+	rtcPeerConnection.createOffer(onOfferCreated, onError);
 }
 
-function answer() {
-	offerer.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+function onOfferCreated(sdp) {
+	offerSDP = sdp;
+	rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
 }
 
-function setLocalAndSendMessage(sessionDescription) {
-  // Set Opus as the preferred codec in SDP if Opus is present.
-  offerer.setLocalDescription(sessionDescription);
-  console.log('setLocalAndSendMessage sending message' , sessionDescription);
-  //sendMessage(sessionDescription);
+function onOfferSDPSet() {
+	socket.emit('offer', offerSDP);
 }
 
-function handleCreateOfferError(event){
-  console.log('createOffer() error: ', e);
+function onRemoteSDPSet() {
+	rtcPeerConnection.createAnswer(onAnswerCreated, onError);
 }
+
+function onAnswerCreated(sdp) {
+	answerSDP = sdp;
+	rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
+}
+
+function onAnswerSDPSet() {
+	socket.emit('answer', answerSDP);
+}
+
+function onError(error){
+	console.log('onError', error);
+}
+
+
+
+
 
 /////////////////////////////
 
@@ -262,19 +248,22 @@ socket.on('open', function() {
 		addTextMessage(message.time, message.from, message.text, message.color);
 	});
 	
-	socket.on('call', function(sdp) {
-		console.log('call');
-		offerer.setRemoteDescription(sdp);
-		
-		
-		/*new RTCSessionDescription(offer), function() {
-		offerer.createAnswer(function(answer) {
-		  offerer.setLocalDescription(new RTCSessionDescription(answer), function() {
-			// send the answer to a server to be forwarded back to the caller (you)
-		  }, null);
-		}, null);
-	  }, null);
-	  */
+	socket.on('candidate', function(message){
+		console.log('socket on candidate', message);
+		var candidate = new RTCIceCandidate( {
+			sdpMLineIndex: message.label,
+			candidate: message.candidate });
+		rtcPeerConnection.addIceCandidate(candidate);
+	});
+	
+	socket.on('offer', function(sdp) {
+		console.log('socket on offer', sdp);
+		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp), onRemoteSDPSet, onError);
+	});
+	
+	socket.on('answer', function(sdp) {
+		console.log('socket on answer', sdp);
+		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
 	});
 	
 });
