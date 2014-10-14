@@ -1,7 +1,7 @@
 'use strict';
 
 //初始化全局参数
-var USER_ID = guid();
+var USER_ID = getUserId();
 
 //web控件
 var getRoomsButton = document.getElementById('getRoomsButton');
@@ -16,7 +16,7 @@ var localCam = document.getElementById('localCam');
 
 ///////////////////////////////////////////////////////////
 //初始化websocket
-var socket = io.connect('https://192.168.0.188');
+var socket = io.connect('https://localhost');
 
 //初始化RTCPeerConnection
 var iceServers = {

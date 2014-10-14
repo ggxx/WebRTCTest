@@ -22,8 +22,6 @@ app.use(express.methodOverride());
 app.use(app.router);
 app.use('/', express.static(__dirname + '/public'));
 app.get('/room/:roomid', function (req, res, next) {
-	req.session.test = req.params.roomid;
-	log(req.session.test);
 	res.sendfile(__dirname + '/public/room.html');
 });
 
