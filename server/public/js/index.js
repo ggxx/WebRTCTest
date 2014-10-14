@@ -19,8 +19,20 @@ socket.on('open', function() {
 		refreshRoomListDOM(rooms);
 	});
 	
-	socket.on('joinroom', function() {
-		
+	// 服务器返回创建room结果
+	socket.on('createroom', function(result) {
+		if (result !== true) {
+			alert('创建房间错误：' + result);
+		}
+	});
+	
+	socket.on('joinroom', function(user) {
+		if (result === true) {
+			window.navigate('/room/' + user.roomid);
+		}
+		else {
+			alert('进入房间错误：' + result);
+		}
 	});
 	
 });
@@ -31,16 +43,16 @@ function getRooms() {
 }
 
 function createRoom() {
-	var roomId = guid();
+	var roomid = guid();
 	var room = {
-		roomid: roomId,
+		roomid: roomid,
 		roomname: document.getElementById('roomNameInput').value || 'NoNameRoom',
-		roomtype: 'text-only'
+		roomtype: ''
 	};
 	var user = {
 		userid: USER_ID,
 		username: document.getElementById('userNameInput').value || 'NoNameUser',
-		roomid: roomId,
+		roomid: roomid,
 		ice: {}
 	};
 	var message = {
@@ -51,7 +63,13 @@ function createRoom() {
 }
 
 function joinRoom(roomid) {
-	
+	var user = {
+		userid: USER_ID,
+		username: document.getElementById('userNameInput').value || 'NoNameUser',
+		roomid: roomid,
+		ice: {}
+	};
+	socket.emit('joinroom', user);
 }
 
 function refreshRoomListDOM(rooms) {

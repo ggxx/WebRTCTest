@@ -9,9 +9,9 @@ function guid() {
 }
 
 function getUserId() {
-	if (!localStorage.userId){ 
-		localStorage.userId = guid();
+	if (!sessionStorage.userId){ 
+		sessionStorage.userId = guid();
 	}
-	console.log('userId' + localStorage.userId);
-	return localStorage.userId;
+	console.log('userId' + sessionStorage.userId);
+	return sessionStorage.userId;
 }

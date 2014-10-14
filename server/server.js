@@ -6,8 +6,8 @@ var app = express();
 var fs = require('fs');
 
 var options = {
-  key: fs.readFileSync('keys/agent-test-key.pem'),
-  cert: fs.readFileSync('keys/agent-test-cert.pem')
+	key: fs.readFileSync('keys/agent-test-key.pem'),
+	cert: fs.readFileSync('keys/agent-test-cert.pem')
 };
 
 //var server = require('http').createServer(app);
