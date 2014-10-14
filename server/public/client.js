@@ -7,15 +7,16 @@ var USER_ID = guid();
 var getRoomsButton = document.getElementById('getRoomsButton');
 var sendMessageButton = document.getElementById('sendMessageButton');
 var createRoomButton = document.getElementById('createRoomButton');
+var shareScreenButton = document.getElementById('shareScreenButton');
+var shareCamButton = document.getElementById('shareCamButton');
+
 var remoteCam = document.getElementById('remoteCam');
 var localCam = document.getElementById('localCam');
 
-//初始化websocket
-var socket = io.connect('http://localhost');
-
-
 
 ///////////////////////////////////////////////////////////
+//初始化websocket
+var socket = io.connect('https://192.168.0.188');
 
 //初始化RTCPeerConnection
 var iceServers = {
@@ -37,14 +38,13 @@ rtcPeerConnection.onicecandidate = handleIceCandidate;
 rtcPeerConnection.onaddstream = handleRemoteStreamAdded;
 rtcPeerConnection.onremovestream = handleRemoteStreamRemoved;
 
-
 function handleIceCandidate(event) {
 	console.log('handleIceCandidate event: ', event);
 	if (event.candidate) {
 		var candidate = {
-			type: 'candidate',
-			label: event.candidate.sdpMLineIndex,
-			id: event.candidate.sdpMid,
+			//type: 'candidate',
+			//id: event.candidate.sdpMid,
+			sdpMLineIndex: event.candidate.sdpMLineIndex,
 			candidate: event.candidate.candidate };
 		socket.emit('candidate', candidate);
 	} else {
@@ -53,8 +53,16 @@ function handleIceCandidate(event) {
 }
 
 function handleRemoteStreamAdded(event) {
-	console.log('handleRemoteStreamAdded');
+	console.log('handleRemoteStreamAdded', event.stream);
 	attachMediaStream(remoteCam, event.stream);
+	
+	//window.AudioContext = window.AudioContext || window.webkitAudioContext;
+	//var audioContext = new AudioContext();
+	//var audioTracks = event.stream.getAudioTracks();
+	//var inputPoint = audioContext.createGain();
+    //realAudioInput = audioContext.createMediaStreamSource(event.stream);
+    //audioInput = realAudioInput;
+    //audioInput.connect(inputPoint);
 }
 
 function handleRemoteStreamRemoved(event) {
@@ -90,7 +98,6 @@ function createRoom() {
 		room: room,
 		user: user
 	};
-	
 	socket.emit('createroom', message);
 }
 
@@ -117,26 +124,64 @@ function leaveRoom(roomid) {
 	socket.emit('leaveroom');
 }
 
+function shareScreen() {
+	
+}
+
+function shareCam() {
+	
+}
+
 function getLocalStream() {
-	var constraints = {video: true};
-	getUserMedia(constraints, handleUserMedia, handleUserMediaError);
+	var camConstraints = { 
+		audio: {
+			optional: [],
+			mandatory: {
+				googEchoCancellation: true
+				//"googAutoGainControl": "false",
+				//"googNoiseSuppression": "false",
+				//"googHighpassFilter": "false"
+			}
+		}, 
+		video: true 
+	};
+	var videoOnlyConstraints = { 
+		audio: false,
+		video: true 
+	};
+	getUserMedia(camConstraints, handleUserMedia, handleUserMediaError);
 }
 
 function handleUserMedia(stream) {
 	console.log('handleUserMedia');
+	
+	var video_constraints = {
+		mandatory: {
+			chromeMediaSource: 'screen'
+		},
+		optional: []
+	};
+
+	var constraints = {
+		audio: false, //100年后，当chrome的桌面共享支持声音时，可改为true
+		video: video_constraints
+	};
+	
+	// 支持桌面共享时，则共享桌面（如chrome）；不支持桌面共享，则共享摄像头（如firefox）
+	getUserMedia(constraints, handleScreenMedia, function(){ handleScreenMedia(stream); });
+	
+	
+	//attachMediaStream(localCam, stream);
+    //rtcPeerConnection.addStream(stream);
+}
+
+function handleScreenMedia(stream) {
 	attachMediaStream(localCam, stream);
     rtcPeerConnection.addStream(stream);
 }
-	
 
 function handleUserMediaError(error) {
-	console.log('handleUserMediaError');
-}
-
-function initClient() {
-	//addUser();
-	getRooms();
-	getLocalStream();
+	console.log('handleUserMediaError', error);
 }
 
 function sendMessage() {
@@ -177,21 +222,15 @@ function onError(error){
 }
 
 
-
-
-
 /////////////////////////////
 
 socket.on('open', function() {
 
-
-	initClient();
-	
-	
-
-	
 	console.log('服务器连接成功');
 
+	getLocalStream();
+	getRooms();
+	
 	// 服务器返回用户列表
 	socket.on('users', function(users) {
 		// 更新房间内的用户列表
@@ -218,11 +257,6 @@ socket.on('open', function() {
 	});
 
 	// 
-	socket.on('removeuser', function() {
-		
-	});
-
-	// 
 	socket.on('createroom', function(result) {
 		if (result === true) {
 			addTextMessage('', 'system', '您已成功创建房间');
@@ -230,11 +264,6 @@ socket.on('open', function() {
 		else {
 			addTextMessage('', 'system', '创建房间失败');
 		}
-	});
-
-	// 
-	socket.on('closeroom', function() {
-		
 	});
 	
 	// 
@@ -250,9 +279,10 @@ socket.on('open', function() {
 	
 	socket.on('candidate', function(message){
 		console.log('socket on candidate', message);
-		var candidate = new RTCIceCandidate( {
-			sdpMLineIndex: message.label,
-			candidate: message.candidate });
+		var candidate = new RTCIceCandidate({
+			sdpMLineIndex: message.sdpMLineIndex,
+			candidate: message.candidate
+		});
 		rtcPeerConnection.addIceCandidate(candidate);
 	});
 	
@@ -308,13 +338,9 @@ function addTextMessage(time, from, text, color) {
 	logs.appendChild(p);
 }
 
-
-
 getRoomsButton.onclick = getRooms;
 createRoomButton.onclick = createRoom;
 sendMessageButton.onclick = sendMessage;
-
-
-
-
+shareScreenButton.onclick = shareScreen;
+shareCamButton.onclick = shareCam;
 

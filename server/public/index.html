@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebRTC Test</title>
+	<link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+
+	<div id="nav">
+		<a href="#">Rooms</a>
+	</div>
+
+	<div id="form">
+		
+		<div id="header">
+			<h1>Rooms</h1>
+		</div>
+		
+		<ul id="roomlist">
+			<li>room1</li>
+			<li>room2</li>
+			<li>room3</li>
+		</ul>
+		
+		<div id="line"></div>
+		
+		<div id="inputs">
+			<input id="userNameInput" type="text" placeholder="UserName"></input><br />
+			<input id="roomNameInput" type="text" placeholder="RoomName"></input><br />
+			<button id="createRoomButton">CreateRoom</button>
+		</div>
+	</div>
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="adapter.js"></script>
+
+
+</body>
+</html>

@@ -14,13 +14,15 @@
 			<input id="userNameInput" type="text" placeholder="UserName"></input>
 			<input id="roomNameInput" type="text" placeholder="RoomName"></input>
 			<button id="createRoomButton">CreateRoom</button>
+			<button id="shareScreenButton">ShareScreen</button>
+			<button id="shareCamButton">ShareCam</button>
 		</div>
 		
 		<div id="videos">
-			<video id="localCam" autoplay muted></video>
-			<video id="remoteCam" autoplay></video>
-			<video id="localDesktop" autoplay></video>
-			<video id="remoteDesktop" autoplay></video>
+			<video id="localCam" autoplay muted controls></video>
+			<video id="remoteCam" autoplay controls></video>
+			<video id="localDesktop" autoplay controls></video>
+			<video id="remoteDesktop" autoplay controls></video>
 		</div>
 
 		<div id="main">
@@ -39,7 +41,7 @@
 		
 	</div>
 
-	<script src="socket.io/socket.io.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
 	<script src="adapter.js"></script>
 	<script src="util.js"></script>
 	<script src="client.js"></script>

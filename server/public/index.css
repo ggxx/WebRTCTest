@@ -1,0 +1,38 @@
+body {
+	background-color: #555;
+	margin: 0;
+	padding: 0;
+}
+
+#nav {
+	background-color: #ccc;
+	padding : 5px 10px;
+}
+
+#form {
+	background-color: #eee;
+	margin: 40px auto;
+	width: 400px;
+}
+
+#header {
+	color: #fff;
+	background-color: #8cf;
+	padding: 5px;
+	text-align: center;
+}
+
+#line {
+	border-top: 1px Solid #ccc;
+	border-bottom: 1px Solid #fff;
+	/*height: 1px;*/
+}
+
+#inputs {
+	padding: 10px 0;
+	text-align: center;
+}
+
+#inputs input {
+	text-align: center;
+}

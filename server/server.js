@@ -1,25 +1,34 @@
+'use strict';
+
 //引入程序包
 var express = require('express');
 var app = express();
-var server = require('http').createServer(app);
-var io = require('socket.io').listen(server);
+var fs = require('fs');
+
+var options = {
+  key: fs.readFileSync('keys/agent-test-key.pem'),
+  cert: fs.readFileSync('keys/agent-test-cert.pem')
+};
+
+//var server = require('http').createServer(app);
+var sserver = require('https').createServer(options, app);
+var io = require('socket.io').listen(sserver);
 io.set('log level', 1); 
-server.listen(1986);
+//server.listen(1986);
+sserver.listen(1987);
 
 app.use(express.logger('dev'));
-app.use(express.cookieParser());
 app.use(express.methodOverride());
 app.use(app.router);
-app.use(express.static(__dirname + '/pages'));
-//app.use('/pages', express.static(__dirname + '/pages'));
-//app.use('/user', express.static(__dirname + '/pages'));
+app.use('/', express.static(__dirname + '/public'));
+app.get('/room/:roomid', function (req, res, next) {
+	req.session.test = req.params.roomid;
+	log(req.session.test);
+	res.sendfile(__dirname + '/public/room.html');
+});
 
-//app.get('/user/:userid', function (req, res, next) {
-//	res.sendfile('pages/p2p.html');
-//});
-
-var rooms = []; //roomid, roomname, roomtype 房间
-var users = []; //userid, username, roomid, ice 进入房间的用户
+var rooms = []; //房间
+var users = []; //进入房间的用户
 
 function getRoomIndex(roomid) {
 	for (var i = 0; i < rooms.length; i++) {
@@ -31,9 +40,7 @@ function getRoomIndex(roomid) {
 }
 
 function getUserIndex(userid) {
-	log('getUserIndex id='+userid);
 	for (var i = 0; i < users.length; i++) {
-		log('userid[i]='+users[i].userid);
 		if (users[i].userid === userid) {
 			return i;
 		}
@@ -84,14 +91,22 @@ io.sockets.on('connection', function (socket) {
 	
 	socket.emit('open');
 	
+	// 初始化房间
+	socket.emit('init', function(userid) {
+		
+	});
+	
+	// 传递SDP
 	socket.on('candidate', function(event) {
 		socket.broadcast.emit('candidate', event);
 	});
 	
+	// 应答P2P连接
 	socket.on('answer', function(sdp) {
 		socket.broadcast.emit('answer', sdp);
 	});
 	
+	// 发起P2P连接
 	socket.on('offer', function(sdp) {
 		socket.broadcast.emit('offer', sdp);
 	});
@@ -122,8 +137,6 @@ io.sockets.on('connection', function (socket) {
 		// 维护全局变量
 		rooms.push(message.room);
 		users.push(message.user);
-		log('rooms push ' + message.room.roomid);
-		log('users push ' + message.user.userid + ',' + message.user.roomid);
 		
 		// 加入room
 		socket.join(message.room.roomid);
@@ -147,7 +160,6 @@ io.sockets.on('connection', function (socket) {
 		
 		// 维护全局变量
 		users.push(user);
-		log('users push ' + user.userid);
 		
 		// 加入room
 		socket.join(user.roomid);
@@ -157,29 +169,12 @@ io.sockets.on('connection', function (socket) {
 		io.sockets.in(user.roomid).emit('users', getUsersInRoom(user.roomid)); // 通知房间内用户有人加入
 	});
 	
-	// 关闭room
-	socket.on('closeroom', function (room) {
-		
-		// 维护全局变量
-		var index = getRoomIndex(room.roomid);
-		if (index >= 0) {
-			rooms.splice(index, 1);
-			//socket.emit('closeroom', true);
-			io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
-			return;
-		}
-		
-		//socket.emit('closeroom', false);
-	});
-	
 	// 离开room
 	socket.on('leaveroom', function () {
 		
 		if (client.roomid === '') {
 			return;
 		}
-		
-		log('leaveroom: ' + client.userid +  ',' + client.roomid);
 		
 		var val = false;
 		
@@ -217,8 +212,6 @@ io.sockets.on('connection', function (socket) {
 	
 	// 收到文字消息
 	socket.on('textmessage', function(text) {
-		
-		log('textmessage');
 		
 		if (client.roomid === '') {
 			return;
@@ -272,13 +265,6 @@ io.sockets.on('connection', function (socket) {
 
 });
 
-//监听全局退出事件
-io.sockets.on('disconnect', function () {  
-	
-});
-
-
-
 function getTime() {
 	var date = new Date();
 	return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
@@ -286,5 +272,5 @@ function getTime() {
 
 function customColor() { 
 	var colors = ['AliceBlue', 'AntiqueWhite', 'Aqua', 'AquaMarine', 'Pink', 'Red', 'Green', 'Orange', 'Blue', 'BlueViolet', 'Brown', 'Burlywood', 'CadetBlue'];
-	return colors[Math.round(Math.random() * 10000 % colors.length)];
+	return colors[Math.round(Math.random() * 0x10000 % colors.length)];
 }
