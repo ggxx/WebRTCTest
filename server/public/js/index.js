@@ -5,6 +5,8 @@ var USER_ID = getUserId();
 var socket = io.connect('https://localhost');
 
 var createRoomButton = document.getElementById('createRoomButton');
+var roomNameInput = document.getElementById('roomNameInput');
+var userNameInput = document.getElementById('userNameInput');
 createRoomButton.onclick = createRoom;
 
 socket.on('open', function() {
@@ -20,15 +22,24 @@ socket.on('open', function() {
 	});
 	
 	// 服务器返回创建room结果
-	socket.on('createroom', function(result) {
-		if (result !== true) {
-			alert('创建房间错误：' + result);
+	// message.result <-> true/false 是否创建成功
+	// message.text   <-> 创建失败的原因
+	// message.roomid <-> 创建room的id
+	socket.on('createroom', function(message) {
+		if (message.result === true) {
+			joinRoom(message.roomid);
+		}
+		else {
+			alert('创建房间错误：' + message.text);
 		}
 	});
 	
+	//
+	//
+	//
 	socket.on('joinroom', function(user) {
 		if (result === true) {
-			window.navigate('/room/' + user.roomid);
+			
 		}
 		else {
 			alert('进入房间错误：' + result);
@@ -46,12 +57,12 @@ function createRoom() {
 	var roomid = guid();
 	var room = {
 		roomid: roomid,
-		roomname: document.getElementById('roomNameInput').value || 'NoNameRoom',
+		roomname: roomNameInput.value || 'NoNameRoom',
 		roomtype: ''
 	};
 	var user = {
 		userid: USER_ID,
-		username: document.getElementById('userNameInput').value || 'NoNameUser',
+		username: userNameInput.value || 'NoNameUser',
 		roomid: roomid,
 		ice: {}
 	};
@@ -65,7 +76,7 @@ function createRoom() {
 function joinRoom(roomid) {
 	var user = {
 		userid: USER_ID,
-		username: document.getElementById('userNameInput').value || 'NoNameUser',
+		username: userNameInput.value || 'NoNameUser',
 		roomid: roomid,
 		ice: {}
 	};

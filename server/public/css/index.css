@@ -1,20 +1,27 @@
-body {
+html,body {
 	margin: 0;
 	padding: 0;
+	height: 100%;
+	width: 100%;
 }
 
 #form {
-	background-color: #eee;
+	background-color: #333;
 	margin: 0 auto;
 	width: 100%;
 	height: 100%;
-	overflow: hidden;
 }
 
 #header {
 	color: #fff;
 	background-color: #8cf;
 	text-align: center;
+	height: 60px;
+}
+
+#header h1 {
+	padding-top: 10px;
+	margin: 0;
 }
 
 #rooms {
@@ -22,7 +29,7 @@ body {
 	float: left;  
 	color: #fff;
 	background-color: #8cf;
-	min-height: 400px;
+	min-height: 900px;
 }
 
 #users {
@@ -30,26 +37,32 @@ body {
 	float: right;  
 	color: #fff;
 	background-color: #8cf;
-	min-height: 400px;
+	min-height: 900px;
 }
 
 #content {
 	position: relative;  
-	background-color: #fff;
-	min-height: 400px;
+	background-color: #eee;
 	margin: 0 200px;
-	border: 1px Solid Red;
+	height: 900px;
+}
+
+#footer {
+	clear: both;
+	width: 100%;
+	background-color: #333;
+	height: 100px;
+	overflow: hidden;
 }
 
 #logs {
-	clear: both;
-	width: 100%;
-	background-color: #ccc;
-	min-height: 100px;
+	position: absolute; 
+	bottom: 0; 
+	height: 200px; 
+	width: 100%; 
 }
 
-#line {
+div.line {
 	border-top: 1px Solid #ccc;
 	border-bottom: 1px Solid #fff;
-	/*height: 1px;*/
 }
