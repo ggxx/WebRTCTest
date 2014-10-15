@@ -21,12 +21,24 @@ app.use(express.logger('dev'));
 app.use(express.methodOverride());
 app.use(app.router);
 app.use('/', express.static(__dirname + '/public'));
-app.get('/room/:roomid', function (req, res, next) {
-	res.sendfile(__dirname + '/public/room.html');
-});
 
 var rooms = []; //房间
 var users = []; //进入房间的用户
+
+function removeRoom(roomid) {
+	var index = getRoomIndex(roomid);
+	if (index >= 0) {
+		rooms.splice(index, 1);
+	}
+}
+
+function getRoom(roomid) {
+	var index = getRoomIndex(roomid);
+	if (index >= 0) {
+		return rooms[index];
+	}
+	return { };
+}
 
 function getRoomIndex(roomid) {
 	for (var i = 0; i < rooms.length; i++) {
@@ -37,6 +49,21 @@ function getRoomIndex(roomid) {
 	return -1;
 }
 
+function removeUser(userid) {
+	var index = getUserIndex(userid);
+	if (index >= 0) {
+		users.splice(index, 1);
+	}
+}
+
+function getUser(userid) {
+	var index = getUserIndex(userid);
+	if (index >= 0) {
+		return users[index];
+	}
+	return { };
+}
+
 function getUserIndex(userid) {
 	for (var i = 0; i < users.length; i++) {
 		if (users[i].userid === userid) {
@@ -44,15 +71,6 @@ function getUserIndex(userid) {
 		}
 	}
 	return -1;
-}
-
-function getUserRoomId(userid) {
-	for (var i = 0; i < users.length; i++) {
-		if (users[i].userid === userid) {
-			return users[i].roomid;
-		}
-	}
-	return '';
 }
 
 function getUsersInRoom(roomid) {
@@ -73,7 +91,6 @@ function log(message) {
 }
 
 
-
 io.sockets.on('connection', function (socket) {
 
 	// 构造客户端对象
@@ -89,25 +106,74 @@ io.sockets.on('connection', function (socket) {
 	
 	socket.emit('open');
 	
-	// 初始化房间
-	socket.emit('init', function(userid) {
+	
+	///-----------------P2P--------------------
+	
+	// 绑定userid与socket
+	socket.on('bind', function(userid) {
+		log('bind ' + userid);
 		
+		// 绑定
+		socket.name = userid;
+		
+		// 遍历找到该用户并回复之
+		io.sockets.clients().forEach(function (socketClient) {
+			if (socketClient.name === userid) {
+				socketClient.emit('bind', true);
+			}
+		});
+	});
+	
+	// 请求共享
+	socket.on('call', function(message) {
+		log('call userid' + message.userid + ', type is ' + message.streamtype);
+		
+		// 遍历找到该用户并回复之
+		io.sockets.clients().forEach(function (socketClient) {
+			if (socketClient.name === message.userid) {
+				socketClient.emit('call', { streamtype: message.streamtype, userid: client.userid } );
+			}
+		});
 	});
 	
 	// 传递SDP
-	socket.on('candidate', function(event) {
-		socket.broadcast.emit('candidate', event);
+	// message.event  => candidate event
+	// message.userid => to whom
+	socket.on('candidate', function(message) {
+		log('candidate from ' + message.userid + ' to ' + client.userid);
+		io.sockets.clients().forEach(function (socketClient) {
+			if (socketClient.name === message.userid) {
+				socketClient.emit('candidate', { candidate: message.candidate, userid: client.userid } );
+			}
+		});
 	});
 	
 	// 应答P2P连接
-	socket.on('answer', function(sdp) {
-		socket.broadcast.emit('answer', sdp);
+	// message.sdp    => sdp
+	// message.userid => to whom
+	socket.on('answer', function(message) {
+		log('answer from ' + message.userid + ' to ' + client.userid);
+		io.sockets.clients().forEach(function (socketClient) {
+			if (socketClient.name === message.userid) {
+				socketClient.emit('answer', { sdp: message.sdp, userid: client.userid } );
+			}
+		});
 	});
 	
 	// 发起P2P连接
-	socket.on('offer', function(sdp) {
-		socket.broadcast.emit('offer', sdp);
+	// message.sdp    => sdp
+	// message.userid => to whom
+	socket.on('offer', function(message) {
+		log('offer from ' + message.userid + ' to ' + client.userid);
+		io.sockets.clients().forEach(function (socketClient) {
+			if (socketClient.name === message.userid) {
+				socketClient.emit('offer', { sdp: message.sdp, userid: client.userid } );
+			}
+		});
 	});
+	
+	
+	///--------------维护room与user-----------------
 	
 	// 获取所有room
 	socket.on('rooms', function () {
@@ -120,34 +186,55 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 创建room
-	socket.on('createroom', function (message) {
+	socket.on('createroom', function (room) {
 	
-		if (client.roomid !== '') {
-			socket.emit('createroom', false); // 反馈房间创建失败
+		//log('client.roomid:' + client.roomid);
+		//log('room.roomid:' + room.roomid);
+		
+		if (client.userid !== '') {
+			var rMessage = {
+				result: false,
+				text: '请先从其它房间中退出',
+				room: room
+			};
+			socket.emit('createroom', rMessage); // 反馈进入房间失败
 			return;
 		}
-	
-		// 初始化client
-		client.userid = message.user.userid;
-		client.username = message.user.username;
-		client.roomid = message.room.roomid;
 		
-		// 维护全局变量
-		rooms.push(message.room);
-		users.push(message.user);
+		rooms.push(room);
 		
-		// 加入room
-		socket.join(message.room.roomid);
+		var rMessage = {
+			result: true,
+			text: '',
+			room: room
+		};
+		socket.emit('createroom', rMessage); // 反馈房间创建成功
 		
-		socket.emit('createroom', true); // 反馈房间创建成功
 		io.sockets.emit('rooms', rooms); // 通知所有client，有新房间
 	});
 	
 	// 有用户进入房间
 	socket.on('joinroom', function (user) {
 	
-		if (client.roomid !== '') {
-			socket.emit('joinroom', false); // 反馈进入房间失败
+		//log('client.roomid:' + client.roomid);
+		//log('user.roomid:' + user.roomid);
+	
+		if (client.userid !== '' && client.roomid !== '' && client.roomid !== user.roomid) {
+			var rMessage = {
+				result: false,
+				text: '请先从其它房间中退出',
+				room: { }
+			};
+			socket.emit('joinroom', rMessage); // 反馈进入房间失败
+			return;
+		}
+		else if (client.userid !== '' && client.roomid !== '' && client.roomid === user.roomid) {
+			var rMessage = {
+				result: false,
+				text: '已进入该房间',
+				room: { }
+			};
+			socket.emit('joinroom', rMessage); // 反馈进入房间失败
 			return;
 		}
 	
@@ -159,61 +246,104 @@ io.sockets.on('connection', function (socket) {
 		// 维护全局变量
 		users.push(user);
 		
-		// 加入room
+		// 将client加入room
 		socket.join(user.roomid);
 		
-		socket.emit('joinroom', true); // 反馈房间进入成功
-		io.sockets.in(user.roomid).emit('joinroom', user.username);
-		io.sockets.in(user.roomid).emit('users', getUsersInRoom(user.roomid)); // 通知房间内用户有人加入
+		var rMessage = {
+			result: true,
+			text: '',
+			room: getRoom(user.roomid)
+		};
+		socket.emit('joinroom', rMessage); // 反馈房间进入成功
+		
+		io.sockets.in(user.roomid).emit('users', getUsersInRoom(user.roomid)); // 通知房间内所有用户有新人供吊打
 	});
 	
 	// 离开room
 	socket.on('leaveroom', function () {
 		
-		if (client.roomid === '') {
+		if (client.userid === '') {
+			var rMessage = {
+				result: false,
+				text: '未进入任何房间',
+				closed: false
+			};
+			socket.emit('leaveroom', rMessage); // 反馈离开房间失败
 			return;
 		}
 		
-		var val = false;
-		
-		// 离开room
+		// 将client从room中退出
 		socket.leave(client.roomid);
 		
-		var index = getUserIndex(client.userid);
-		if (index >= 0) {
-			users.splice(index, 1);
-			val = true;
-			var curUsers = getUsersInRoom(client.roomid);
-			if (curUsers.length > 0) {
-				log('leaveroom: 房间里还有其它人');
-				// 房间里还有人
-				io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
-			}
-			else {
-				// 房间里无人，关闭房间
-				log('leaveroom: 房间里无人，关闭房间');
-				var rIndex = getRoomIndex(client.roomid);
-				if (rIndex >= 0) {
-					rooms.splice(rIndex, 1);
-					io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
-				}
-			}
+		// 维护全局变量
+		removeUser(client.userid);
+		
+		var closed;
+		var curUsers = getUsersInRoom(client.roomid);
+		if (curUsers.length > 0) {
+			// 房间里还有人
+			io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
+			closed = false;
 		}
-
+		else {
+			// 房间里无人，关闭房间
+			removeRoom(client.roomid);
+			io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
+			closed = true;
+		}
+		
 		// 重置client
 		client.userid = '';
 		client.username = '';
 		client.roomid = '';
 		
-		socket.emit('leaveroom', val);
+		var rMessage = {
+			result: true,
+			text: '',
+			closed: closed
+		};
+		socket.emit('leaveroom', rMessage); // 反馈离开房间成功
+	});
+	
+	// 监听出退事件
+	socket.on('disconnect', function () {  
+		
+		// 将client从room中退出
+		socket.leave(client.roomid);
+		
+		// 维护全局变量
+		removeUser(client.userid);
+		
+		var curUsers = getUsersInRoom(client.roomid);
+		if (curUsers.length > 0) {
+			// 房间里还有人
+			io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
+		}
+		else {
+			// 房间里无人，关闭房间
+			removeRoom(client.roomid);
+			io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
+		}
+		
+		// 重置client
+		client.userid = '';
+		client.username = '';
+		client.roomid = '';
+		
+		var rMessage = {
+			result: true,
+			text: ''
+		};
+		socket.emit('leaveroom', rMessage);
 	});
 	
 	// 收到文字消息
 	socket.on('textmessage', function(text) {
 		
-		if (client.roomid === '') {
+		if (client.userid === '') {
 			return;
 		}
+		
 		var message = {
 			time: getTime(),
 			from: client.username,
@@ -221,44 +351,6 @@ io.sockets.on('connection', function (socket) {
 			color: client.color
 		};
 		io.sockets.in(client.roomid).emit('textmessage', message);
-	});
-	
-	// 监听出退事件
-	socket.on('disconnect', function () {  
-		
-		if (client.roomid === '') {
-			return;
-		}
-
-		var val = false;
-		
-		// 离开room
-		socket.leave(client.roomid);
-		
-		var index = getUserIndex(client.userid);
-		if (index >= 0) {
-			users.splice(index, 1);
-			val = true;
-			var curUsers = getUsersInRoom(client.roomid);
-			if (curUsers.length > 0) {
-				log('leaveroom: 房间里还有其它人');
-				// 房间里还有人
-				io.sockets.in(client.roomid).emit('users', curUsers); // 通知房间内的用户人数有变化
-			}
-			else {
-				// 房间里无人，关闭房间
-				log('leaveroom: 房间里无人，关闭房间');
-				var rIndex = getRoomIndex(client.roomid);
-				if (rIndex >= 0) {
-					rooms.splice(rIndex, 1);
-					io.sockets.emit('rooms', rooms); // 通知所有client，room有变化
-				}
-			}
-		}
-		
-		// 广播用户已退出
-		//socket.broadcast.emit('system', obj);
-		//console.log(client.name + 'Disconnect');
 	});
 
 });

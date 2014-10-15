@@ -14,21 +14,27 @@
 		</div>
 		
 		<div id="rooms">
-			<h1>Rooms</h1>
+			<h1>Settings</h1>
 			<input id="userNameInput" type="text" placeholder="UserName" />
 			<input id="roomNameInput" type="text" placeholder="RoomName" /><br />
 			<button id="createRoomButton">CreateRoom</button>
+			<button id="shareCamButton">ShareCam</button>
+			<button id="shareScreenButton">ShareScreen</button>
+			<h1>Rooms</h1>
 			<ul id="roomlist">
 			</ul>
 		</div>
 		
 		<div id="users">
+			<h1 id="roomNameLabel">Choose a room</h1>
+			<button id="leaveRoomButton">LeaveRoom</button>
 			<ul id="userlist">
 			</ul>
 		</div>
 		
 		<div id="content">
-
+			<video autoplay controls id="localCam"></video>
+			<video autoplay controls id="remoteCam"></video>
 			<div id="logs">
 				<div class="line">
 				</div>
