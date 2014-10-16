@@ -13,7 +13,7 @@ var userNameInput = document.getElementById('userNameInput');
 var messageInput = document.getElementById('messageInput');
 
 var remoteCam = document.getElementById('remoteCam');
-var localCam = document.getElementById('localCam');
+/*var localCam = document.getElementById('localCam');*/
 
 createRoomButton.onclick = createRoom;
 leaveRoomButton.onclick = leaveRoom;
@@ -24,7 +24,7 @@ sendMessageButton.onclick = sendMessage;
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.137.1');
+var socket = io.connect('https://192.168.0.99');
 socket.on('open', function() {
 
 	console.log('服务器连接成功');
@@ -84,7 +84,8 @@ socket.on('open', function() {
 	// message.closed => room是否因无user而关闭
 	socket.on('leaveroom', function(message) {
 		console.log('socket on leaveroom');
-		if (message.result === true && message.closed === true) {
+		if (message.result === true) {
+			refreshRoomDOM();
 			refreshUserListDOM([]);
 		}
 	});
@@ -163,6 +164,21 @@ function getRooms() {
 }
 
 function createRoom() {
+
+	if (!roomNameInput.value) {
+		alert('不给房间起个名字么，亲？');
+		roomNameInput.setAttribute('class', 'emptytextbox');
+		return;
+	}
+	if (!userNameInput.value) {
+		alert('不给自己起个名字么，亲？');
+		userNameInput.setAttribute('class', 'emptytextbox');
+		return;
+	}
+	
+	roomNameInput.setAttribute('class', 'textbox');
+	userNameInput.setAttribute('class', 'textbox');
+	
 	var room = {
 		roomid: guid(),
 		roomname: roomNameInput.value || 'NoNameRoom',
@@ -173,6 +189,16 @@ function createRoom() {
 }
 
 function joinRoom(roomid) {
+
+	if (!userNameInput.value) {
+		alert('不给自己起个名字么，亲？');
+		userNameInput.setAttribute('class', 'emptytextbox');
+		return;
+	}
+	
+	roomNameInput.setAttribute('class', 'textbox');
+	userNameInput.setAttribute('class', 'textbox');
+	
 	var user = {
 		userid: USER_ID,
 		username: userNameInput.value || 'NoNameUser',
@@ -196,7 +222,7 @@ function leaveRoom() {
 }
 
 function shareCam() {
-	if (isSharingCam === false) {
+	if (isCamSharing === false) {
 		initCamera();
 	}
 	else {
@@ -205,7 +231,12 @@ function shareCam() {
 }
 
 function shareScreen() {
-	initScreen();
+	if (isScreenSharing === false) {
+		initScreen();
+	}
+	else {
+		stopSharingScreen();
+	}
 }
 
 // type => 1.cam & mic; 2.screen; 3.screen & cam & mic
@@ -256,13 +287,21 @@ var camConstraints = {
 			//"googHighpassFilter": "false"
 		}
 	}, 
-	video: true 
+	video: {
+		mandatory: {
+			maxWidth: 1920,
+			maxHeight: 1080
+		},
+		optional: []
+	}
 };
 var screenConstraints = {
 	audio: false, //100年后，当chrome的桌面共享支持声音时，可改为true
 	video: {
 		mandatory: {
-			chromeMediaSource: 'screen'
+			chromeMediaSource: 'screen',
+			maxWidth: 1920,
+			maxHeight: 1080
 		},
 		optional: []
 	}
@@ -284,9 +323,7 @@ function gotCamera(stream) {
 }
 
 function gotCameraError(error) {
-	camStream = null;
-	isCamSharing = false;
-	shareCamButton.innerHTML = 'ShareCam';
+	stopSharingCamera();
 }
 
 function gotScreen(stream) {
@@ -297,6 +334,22 @@ function gotScreen(stream) {
 }
 
 function gotScreenError(stream) {
+	stopSharingScreen();
+}
+
+function stopSharingCamera() {
+	if (camStream) {
+		camStream.stop();
+	}
+	camStream = null;
+	isCamSharing = false;
+	shareCamButton.innerHTML = 'ShareCam';
+}
+
+function stopSharingScreen() {
+	if (screenStream) {
+		screenStream.stop();
+	}
 	screenStream = null;
 	isScreenSharing = false;
 	shareScreenButton.innerHTML = 'ShareScreen';
@@ -416,7 +469,16 @@ function onError(error){
 // 更新room名称DOM
 function refreshRoomDOM(room) {
 	var roomNameLabel = document.getElementById('roomNameLabel');
-	roomNameLabel.innerHTML = room.roomname;
+	if (room) {
+		roomNameLabel.innerHTML = room.roomname;
+		roomNameInput.setAttribute('readonly','readonly');
+		userNameInput.setAttribute('readonly','readonly');
+	}
+	else {
+		roomNameLabel.innerHTML = 'No room';
+		roomNameInput.removeAttribute('readonly');
+		userNameInput.removeAttribute('readonly');
+	}
 }
 
 // 更新room内user列表DOM
@@ -425,8 +487,9 @@ function refreshUserListDOM(users) {
 	ul.innerHTML = '';
 	for (var i = 0; i < users.length; i++) {
 		var li = document.createElement('li');
-		li.innerHTML = users[i].username;
-		li.innerHTML += '<button onclick="javascript:call(\''+ users[i].userid +'\')">Call</button>';
+		li.innerHTML = '<span>' + users[i].username + '</span>';
+		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\')"><img src="images/cam.png"  /></a>';
+		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\')"><img src="images/screen.png"  /></a>';
 		ul.appendChild(li);
 	}
 }

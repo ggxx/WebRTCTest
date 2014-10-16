@@ -17,9 +17,9 @@
 			<h2>Settings</h2>
 			<input id="userNameInput" maxlength="16" type="text" placeholder="UserName" class="textbox" />
 			<input id="roomNameInput" maxlength="16" type="text" placeholder="RoomName" class="textbox" />
-			<a href="javascript:void(0)" id="createRoomButton" class="button">CreateRoom</a>
-			<a href="javascript:void(0)" id="shareCamButton" class="button">ShareCam</a>
-			<a href="javascript:void(0)" id="shareScreenButton" class="button">ShareScreen</a>
+			<a href="javascript:void(0)" id="createRoomButton" class="sidebarbutton">CreateRoom</a>
+			<a href="javascript:void(0)" id="shareCamButton" class="sidebarbutton">ShareCam</a>
+			<a href="javascript:void(0)" id="shareScreenButton" class="sidebarbutton">ShareScreen</a>
 		
 			<h2>Rooms</h2>
 			<ul id="roomlist">
@@ -28,13 +28,13 @@
 		
 		<div id="users">
 			<h2 id="roomNameLabel">No room</h2>
-			<button id="leaveRoomButton">LeaveRoom</button>
 			<ul id="userlist">
 			</ul>
+			<a href="javascript:void(0)" id="leaveRoomButton" class="sidebarbutton">LeaveRoom</a>
 		</div>
 		
 		<div id="content">
-			<video autoplay controls id="localCam"></video>
+			<!--video autoplay controls id="localCam"></video-->
 			<video autoplay controls id="remoteCam"></video>
 			<div id="logs">
 				<div class="line">
@@ -47,6 +47,8 @@
 		</div>
 		
 		<div id="footer">
+			<p>Dev by ggxx</p>
+			<p>follow me at <a href="https://github.com/ggxx" target="_blank">GitHub</a></p>
 		</div>
 	</div>
 
