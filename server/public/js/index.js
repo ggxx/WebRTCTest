@@ -4,10 +4,14 @@ var USER_ID = getUserId();
 
 var createRoomButton = document.getElementById('createRoomButton');
 var leaveRoomButton = document.getElementById('leaveRoomButton');
-var roomNameInput = document.getElementById('roomNameInput');
-var userNameInput = document.getElementById('userNameInput');
 var shareCamButton = document.getElementById('shareCamButton');
 var shareScreenButton = document.getElementById('shareScreenButton');
+var sendMessageButton = document.getElementById('sendMessageButton');
+
+var roomNameInput = document.getElementById('roomNameInput');
+var userNameInput = document.getElementById('userNameInput');
+var messageInput = document.getElementById('messageInput');
+
 var remoteCam = document.getElementById('remoteCam');
 var localCam = document.getElementById('localCam');
 
@@ -15,11 +19,12 @@ createRoomButton.onclick = createRoom;
 leaveRoomButton.onclick = leaveRoom;
 shareCamButton.onclick = shareCam;
 shareScreenButton.onclick = shareScreen;
+sendMessageButton.onclick = sendMessage;
 
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.0.188');
+var socket = io.connect('https://192.168.137.1');
 socket.on('open', function() {
 
 	console.log('服务器连接成功');
@@ -81,6 +86,16 @@ socket.on('open', function() {
 		console.log('socket on leaveroom');
 		if (message.result === true && message.closed === true) {
 			refreshUserListDOM([]);
+		}
+	});
+	
+	socket.on('textmessage', function(message) {
+		console.log('socket on textmessage');
+		if (message.result === true) {
+			refreshMessageListDOM(message.time, message.from, message.text, message.color);
+		}
+		else {
+			refreshMessageListDOM(message.time, '消息发送失败', message.text);
 		}
 	});
 	
@@ -181,7 +196,12 @@ function leaveRoom() {
 }
 
 function shareCam() {
-	initCamera();
+	if (isSharingCam === false) {
+		initCamera();
+	}
+	else {
+		stopSharingCamera();
+	}
 }
 
 function shareScreen() {
@@ -213,9 +233,17 @@ function call(userid, type) {
 	socket.emit('call', message);
 }
 
+function sendMessage() {
+	var text = messageInput.value;
+	if ( text && text !== '') {
+		socket.emit('textmessage', text);
+	}
+}
+
 
 ///---------------USER MEDIA-----------------
 
+var isCamSharing = false, isScreenSharing = false;
 var camaStreamId, screenStreamId;
 var camStream, screenStream;
 var camConstraints = { 
@@ -241,21 +269,37 @@ var screenConstraints = {
 };
 
 function initCamera() {
-	getUserMedia(camConstraints, gotCamera, onError);
+	getUserMedia(camConstraints, gotCamera, gotCameraError);
 }
 
 function initScreen() {
-	getUserMedia(screenConstraints, gotScreen, onError);
+	getUserMedia(screenConstraints, gotScreen, gotScreenError);
 }
 
 function gotCamera(stream) {
 	//console.log('gotCamera');
 	camStream = stream;
+	isCamSharing = true;
+	shareCamButton.innerHTML = 'StopSharingCam';
+}
+
+function gotCameraError(error) {
+	camStream = null;
+	isCamSharing = false;
+	shareCamButton.innerHTML = 'ShareCam';
 }
 
 function gotScreen(stream) {
 	//console.log('gotScreen');
 	screenStream = stream;
+	isScreenSharing = true;
+	shareScreenButton.innerHTML = 'StopSharingScreen';
+}
+
+function gotScreenError(stream) {
+	screenStream = null;
+	isScreenSharing = false;
+	shareScreenButton.innerHTML = 'ShareScreen';
 }
 
 
@@ -393,7 +437,18 @@ function refreshRoomListDOM(rooms) {
 	ul.innerHTML = '';
 	for (var i = 0; i < rooms.length; i++) {
 		var li = document.createElement('li');
-		li.innerHTML = '<a href="javascript:joinRoom(\'' + rooms[i].roomid + '\');">' + rooms[i].roomname + '</a>';
+		li.innerHTML = '<a href="javascript:joinRoom(\'' + rooms[i].roomid + '\');">[' + (i+1) + '] ' + rooms[i].roomname + '</a>';
 		ul.appendChild(li);
 	}
+}
+
+// 增加一条文字消息
+function refreshMessageListDOM(time, from, text, color) {
+	var div = document.getElementById('messages');
+	var p = document.createElement('p');
+	p.innerHTML = time + ' ' + from + ': ' + text;
+	if (color) {
+		p.style.backgroundColor = color;
+	}
+	div.appendChild(p);
 }

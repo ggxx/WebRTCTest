@@ -109,7 +109,7 @@ io.sockets.on('connection', function (socket) {
 	
 	///-----------------P2P--------------------
 	
-	// 绑定userid与socket
+	// 绑定userid与socket.name
 	socket.on('bind', function(userid) {
 		log('bind ' + userid);
 		
@@ -136,7 +136,7 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 	
-	// 传递SDP
+	// 将candidate告知对方
 	// message.event  => candidate event
 	// message.userid => to whom
 	socket.on('candidate', function(message) {
@@ -160,7 +160,7 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 	
-	// 发起P2P连接
+	// 公布P2P连接
 	// message.sdp    => sdp
 	// message.userid => to whom
 	socket.on('offer', function(message) {
@@ -338,29 +338,38 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 收到文字消息
+	// 
 	socket.on('textmessage', function(text) {
 		
-		if (client.userid === '') {
-			return;
+		if (client.userid === '' || client.roomid === '') {
+			var rMessage = {
+				result: false,
+				text: '未进入任何房间'
+			};
+			socket.emit('textmessage', rMessage);
 		}
 		
-		var message = {
+		var rMessage = {
+			result: true,
 			time: getTime(),
 			from: client.username,
 			text: text,
 			color: client.color
 		};
-		io.sockets.in(client.roomid).emit('textmessage', message);
+		io.sockets.in(client.roomid).emit('textmessage', rMessage); // 房间内群发
 	});
 
 });
 
 function getTime() {
 	var date = new Date();
-	return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+	return date.toLocaleTimeString();
+	//return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 }
 
 function customColor() { 
-	var colors = ['AliceBlue', 'AntiqueWhite', 'Aqua', 'AquaMarine', 'Pink', 'Red', 'Green', 'Orange', 'Blue', 'BlueViolet', 'Brown', 'Burlywood', 'CadetBlue'];
+	var colors = ['#F5A9A9', '#F5BCA9', '#F5D0A9', '#F3E2A9', '#F2F5A9', '#E1F5A9', '#D0F5A9', '#BCF5A9', '#A9F5A9', 
+		'#A9F5D0', '#A9F5E1', '#A9F5F2', '#A9E2F3', '#A9D0F5', '#A9BCF5', '#A9A9F5', '#BCA9F5', '#D0A9F5', '#E2A9F3', 
+		'#F5A9F2', '#F5A9E1', '#F5A9D0', '#F5A9BC', '#E6E6E6'];
 	return colors[Math.round(Math.random() * 0x10000 % colors.length)];
 }

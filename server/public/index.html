@@ -14,19 +14,20 @@
 		</div>
 		
 		<div id="rooms">
-			<h1>Settings</h1>
-			<input id="userNameInput" type="text" placeholder="UserName" />
-			<input id="roomNameInput" type="text" placeholder="RoomName" /><br />
-			<button id="createRoomButton">CreateRoom</button>
-			<button id="shareCamButton">ShareCam</button>
-			<button id="shareScreenButton">ShareScreen</button>
-			<h1>Rooms</h1>
+			<h2>Settings</h2>
+			<input id="userNameInput" maxlength="16" type="text" placeholder="UserName" class="textbox" />
+			<input id="roomNameInput" maxlength="16" type="text" placeholder="RoomName" class="textbox" />
+			<a href="javascript:void(0)" id="createRoomButton" class="button">CreateRoom</a>
+			<a href="javascript:void(0)" id="shareCamButton" class="button">ShareCam</a>
+			<a href="javascript:void(0)" id="shareScreenButton" class="button">ShareScreen</a>
+		
+			<h2>Rooms</h2>
 			<ul id="roomlist">
 			</ul>
 		</div>
 		
 		<div id="users">
-			<h1 id="roomNameLabel">Choose a room</h1>
+			<h2 id="roomNameLabel">No room</h2>
 			<button id="leaveRoomButton">LeaveRoom</button>
 			<ul id="userlist">
 			</ul>
@@ -38,6 +39,10 @@
 			<div id="logs">
 				<div class="line">
 				</div>
+				<div id="messages">
+				</div>
+				<input id="messageInput" type="text" placeholder="say something..." />
+				<button id="sendMessageButton">SendMessage</button>
 			</div>
 		</div>
 		
