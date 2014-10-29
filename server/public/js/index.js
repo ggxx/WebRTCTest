@@ -89,6 +89,16 @@ socket.on('open', function() {
 		}
 	});
 	
+	// 
+	socket.on('sharecam', function(message) {
+		
+	});
+	
+	// 收到
+	socket.on('sharescreen', function(message) {
+		
+	});
+	
 	socket.on('textmessage', function(message) {
 		console.log('socket on textmessage');
 		if (message.result === true) {
@@ -106,36 +116,36 @@ socket.on('open', function() {
 	socket.on('call', function(message) {
 		console.log('socket on call');
 		
-		targetPeers[message.from] = {
-			targerId: message.from,
-			streamType: message.streamtype
-		};
-		
 		if (message.streamtype === 1 || message.streamtype === 2 || message.streamtype === 3) {
 			if (!mediaStream) {
+				console.log('no media stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-media'] = buildRtcPeerConnection(message.streamtype);
+			rtcPeerConnections[message.from + '-media'] = buildRtcPeerConnection(message.from, message.streamtype);
 			rtcPeerConnections[message.from + '-media'].addStream(mediaStream);
 			switch (message.streamtype) {
 				case 1:
-					rtcPeerConnections[message.from + '-media'].createOffer(onOfferCreated, onError, videoOnlyOfferConstraints);
+					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, videoOnlyOfferConstraints);
 					break;
 				case 2:
-					rtcPeerConnections[message.from + '-media'].createOffer(onOfferCreated, onError, audioOnlyOfferConstraints);
+					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, audioOnlyOfferConstraints);
 					break;
 				case 3:
-					rtcPeerConnections[message.from + '-media'].createOffer(onOfferCreated, onError, offerConstraints);
+					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, offerConstraints);
 					break;
 			}
 		}
 		else if (message.streamtype === 4) {
 			if (!screenStream) {
+				console.log('no screen stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-screen'] = buildRtcPeerConnection(message.streamtype);
+			rtcPeerConnections[message.from + '-screen'] = buildRtcPeerConnection(message.from, message.streamtype);
 			rtcPeerConnections[message.from + '-screen'].addStream(screenStream);
-			rtcPeerConnections[message.from + '-screen'].createOffer(onOfferCreated, onError, videoOnlyOfferConstraints);
+			rtcPeerConnections[message.from + '-screen'].createOffer(rtcPeerConnections[message.from + '-screen'].onoffercreated, onError, videoOnlyOfferConstraints);
+		}
+		else {
+			console.log('message.streamtype (' + message.streamtype + ') is wrong');
 		}
 	});
 	
@@ -159,7 +169,8 @@ socket.on('open', function() {
 	socket.on('offer', function(message) {
 		console.log('socket on offer');
 		console.log('>>> setRemoteDescription offer');
-		getRTCPeerConnection(message.from, message.streamtype).setRemoteDescription(new RTCSessionDescription(message.sdp), onRemoteSDPSet, onError);
+		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype);
+		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp), rtcPeerConnection.onremotesdpset, onError);
 	});
 	
 	// from
@@ -169,7 +180,8 @@ socket.on('open', function() {
 	socket.on('answer', function(message) {
 		console.log('socket on answer');
 		console.log('>>> setRemoteDescription answer');
-		getRTCPeerConnection(message.from, message.streamtype).setRemoteDescription(new RTCSessionDescription(message.sdp));
+		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype);
+		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
 	});
 	
 	
@@ -281,12 +293,15 @@ function stopSharing() {
 // type => 1.cam, 2.mic, 3.cam & mic, 4.screen
 function call(userid, type) {
 	//console.log('call');
-	//targetUserId = userid;
 	var message = {
 		from: USER_ID,
 		to: userid,
-		streamtype: 3
+		streamtype: type
 	};
+
+	var tmp = (type === 4) ? '-screen' : '-media';
+	rtcPeerConnections[userid + tmp] = buildRtcPeerConnection(userid, type);
+	
 	console.log('send socket message: call');
 	socket.emit('call', message);
 }
@@ -327,8 +342,8 @@ var screenConstraints = {
 	video: {
 		mandatory: {
 			chromeMediaSource: 'screen',
-			maxWidth: 1024,
-			maxHeight: 768
+			maxWidth: 1920,
+			maxHeight: 1080
 		},
 		optional: []
 	}
@@ -347,7 +362,12 @@ function gotCamera(stream) {
 	mediaStream = stream;
 	isCamSharing = true;
 	shareCamButton.innerHTML = 'StopSharingCam';
-	socket.emit('sharecam', true);
+	var rMessage = {
+		userid: USER_ID,
+		cameraSharing: true,
+		microphoneSharing: true
+	};
+	socket.emit('sharecam', rMessage);
 }
 
 function gotCameraError(error) {
@@ -359,7 +379,11 @@ function gotScreen(stream) {
 	screenStream = stream;
 	isScreenSharing = true;
 	shareScreenButton.innerHTML = 'StopSharingScreen';
-	socket.emit('sharescreen', true);
+	var rMessage = {
+		userid: USER_ID,
+		screenSharing: true
+	};
+	socket.emit('sharescreen', rMessage);
 }
 
 function gotScreenError(stream) {
@@ -373,7 +397,12 @@ function stopSharingCamera() {
 	mediaStream = null;
 	isCamSharing = false;
 	shareCamButton.innerHTML = 'ShareCam';
-	socket.emit('sharecam', false);
+	var rMessage = {
+		userid: USER_ID,
+		cameraSharing: false,
+		microphoneSharing: false
+	};
+	socket.emit('sharecam', rMessage);
 }
 
 function stopSharingScreen() {
@@ -383,7 +412,11 @@ function stopSharingScreen() {
 	screenStream = null;
 	isScreenSharing = false;
 	shareScreenButton.innerHTML = 'ShareScreen';
-	socket.emit('sharescreen', false);
+	var rMessage = {
+		userid: USER_ID,
+		screenSharing: false
+	};
+	socket.emit('sharescreen', rMessage);
 }
 
 
@@ -426,34 +459,82 @@ var offerSDPs = { };
 var answerSDPs = { };
 var targetUserIds = { };
 
-function getRtcPeerConnection(id, type) {
+function getRTCPeerConnection(id, type) {
 	var tmp = (type === 4) ? '-screen' : '-media';
 	return rtcPeerConnections[id + tmp];
 }
 
-function buildRtcPeerConnection(type) {	
+function buildRtcPeerConnection(id, type) {	
 	var rtcPeerConnection = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
 	rtcPeerConnection.onicecandidate = handleIceCandidate;
 	rtcPeerConnection.onaddstream = handleRemoteStreamAdded;
 	rtcPeerConnection.onremovestream = handleRemoteStreamRemoved;
-	return rtcPeerConnection;
-}
-
-function handleIceCandidate(event) {
-	//console.log('handleIceCandidate event: ');
-	if (event.candidate) {
-		var candidate = {
-			sdpMLineIndex: event.candidate.sdpMLineIndex,
-			candidate: event.candidate.candidate };
-		var message = {
-			userid: USER_ID,
-			candidate: candidate
-		};
-		console.log('send socket message: candidate');
-		socket.emit('candidate', message);
-	} else {
-		console.log('End of candidates.');
+	
+	// custom function
+	rtcPeerConnection.onremotesdpset = onRemoteSDPSet;
+	rtcPeerConnection.onoffercreated = onOfferCreated;
+	
+	function handleIceCandidate(event) {
+		//console.log('handleIceCandidate event: ');
+		if (event.candidate) {
+			var candidate = {
+				sdpMLineIndex: event.candidate.sdpMLineIndex,
+				candidate: event.candidate.candidate };
+			var rMessage = {
+				from: USER_ID,
+				to: id,
+				candidate: candidate
+			};
+			console.log('send socket message: candidate');
+			socket.emit('candidate', rMessage);
+		} else {
+			console.log('End of candidates.');
+		}
 	}
+	
+	function onOfferCreated(sdp) {
+		console.log('onOfferCreated');
+		rtcPeerConnection.offerSDP = sdp;
+		console.log('>>> setLocalDescription offer');
+		rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
+	}
+	
+	function onRemoteSDPSet() {
+		console.log('onRemoteSDPSet');
+		rtcPeerConnection.createAnswer(onAnswerCreated, onError);
+	}
+	
+	function onAnswerCreated(sdp) {
+		console.log('onAnswerCreated');
+		rtcPeerConnection.answerSDP = sdp;
+		console.log('>>> setLocalDescription answer');
+		rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
+	}
+	
+	function onOfferSDPSet() {
+		console.log('onOfferSDPSet');
+		var message = {
+			from: USER_ID,
+			to: id,
+			sdp: rtcPeerConnection.offerSDP,
+			streamtype: type
+		};
+		console.log('send socket message: offer');
+		socket.emit('offer', message);
+	}
+
+	function onAnswerSDPSet() {
+		var message = {
+			from: USER_ID,
+			to: id,
+			sdp: rtcPeerConnection.answerSDP,
+			streamtype: type
+		};
+		console.log('send socket message: answer');
+		socket.emit('answer', message);
+	}
+	
+	return rtcPeerConnection;
 }
 
 function handleRemoteStreamAdded(event) {
@@ -470,44 +551,6 @@ function handleRemoteStreamRemoved(event) {
 	console.log('handleRemoteStreamRemoved');
 	
 	// TODO: Stop recording
-}
-
-function onOfferCreated(sdp) {
-	//console.log('onOfferCreated');
-	offerSDP = sdp;
-	console.log('>>> setLocalDescription offer');
-	rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
-}
-
-function onOfferSDPSet() {
-	//console.log('onOfferSDPSet');
-	var message = {
-		userid: targetUserId,
-		sdp: offerSDP
-	};
-	console.log('send socket message: offer');
-	socket.emit('offer', message);
-}
-
-function onRemoteSDPSet() {
-	//console.log('onRemoteSDPSet');
-	rtcPeerConnection.createAnswer(onAnswerCreated, onError);
-}
-
-function onAnswerCreated(sdp) {
-	//console.log('onAnswerCreated');
-	answerSDP = sdp;
-	console.log('>>> setLocalDescription answer');
-	rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
-}
-
-function onAnswerSDPSet() {
-	var message = {
-		userid: targetUserId,
-		sdp: answerSDP
-	};
-	console.log('send socket message: answer');
-	socket.emit('answer', message);
 }
 
 function onError(error){
@@ -538,8 +581,8 @@ function refreshUserListDOM(users) {
 	for (var i = 0; i < users.length; i++) {
 		var li = document.createElement('li');
 		li.innerHTML = '<span>' + users[i].username + '</span>';
-		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\')"><img src="images/cam.png"  /></a>';
-		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\')"><img src="images/screen.png"  /></a>';
+		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\', 3)"><img src="images/cam.png"  /></a>';
+		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\', 4)"><img src="images/screen.png"  /></a>';
 		ul.appendChild(li);
 	}
 }

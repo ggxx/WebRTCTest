@@ -132,8 +132,7 @@ io.sockets.on('connection', function (socket) {
 	// message.to
 	// message.streamtype => 1.cam & mic; 2.screen; 3.screen & cam & mic
 	socket.on('call', function(message) {
-		log(meassage.from + 'call userid' + message.to + ', type is ' + message.streamtype);
-		
+		log('call from ' + message.from + ' to ' + message.to);
 		// 遍历找到该用户并回复之
 		io.sockets.clients().forEach(function (socketClient) {
 			if (socketClient.name === message.to) {
@@ -144,36 +143,41 @@ io.sockets.on('connection', function (socket) {
 	
 	// 将candidate告知对方
 	// message.event  => candidate event
-	// message.userid => to whom
+	// message.from => to whom
+	// message.to
 	socket.on('candidate', function(message) {
-		log('candidate from ' + message.userid + ' to ' + client.userid);
+		log('candidate from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
-			if (socketClient.name === message.userid) {
-				socketClient.emit('candidate', { candidate: message.candidate, userid: client.userid } );
+			if (socketClient.name === message.to) {
+				socketClient.emit('candidate', message);
 			}
 		});
 	});
 	
 	// 应答P2P连接
 	// message.sdp    => sdp
-	// message.userid => to whom
+	// message.from => to whom
+	// message.to
+	// message.streamtype
 	socket.on('answer', function(message) {
-		log('answer from ' + message.userid + ' to ' + client.userid);
+		log('answer from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
-			if (socketClient.name === message.userid) {
-				socketClient.emit('answer', { sdp: message.sdp, userid: client.userid } );
+			if (socketClient.name === message.to) {
+				socketClient.emit('answer', message);
 			}
 		});
 	});
 	
 	// 公布P2P连接
 	// message.sdp    => sdp
-	// message.userid => to whom
+	// message.from => to whom
+	// message.to
+	// message.streamtype
 	socket.on('offer', function(message) {
-		log('offer from ' + message.userid + ' to ' + client.userid);
+		log('offer from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
-			if (socketClient.name === message.userid) {
-				socketClient.emit('offer', { sdp: message.sdp, userid: client.userid } );
+			if (socketClient.name === message.to) {
+				socketClient.emit('offer', message);
 			}
 		});
 	});
@@ -371,6 +375,9 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	// 设备共享状态更新
+	// userid => 
+	// cameraSharing => true, false
+	// microphoneSharing => true, false
 	socket.on('sharecam', function(message) {
 		client.cameraSharing = message.cameraSharing;
 		client.microphoneSharing = message.microphoneSharing;
@@ -378,6 +385,8 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 设备共享状态更新
+	// userid =>
+	// screenSharing => true, false
 	socket.on('sharescreen', function(message) {
 		client.screenSharing = message.screenSharing;
 		io.sockets.in(client.roomid).emit('sharescreen', message); // 房间内群发
