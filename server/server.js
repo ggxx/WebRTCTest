@@ -99,7 +99,10 @@ io.sockets.on('connection', function (socket) {
 		username: '',
 		roomid: '',
 		color: customColor(),
-		sessionDescription: {}
+		sessionDescription: {},
+		cameraSharing: false,
+		microphoneSharing: false,
+		screenSharing: false
 	};
 
 	log('on connection');
@@ -125,13 +128,16 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 请求共享
+	// message.from
+	// message.to
+	// message.streamtype => 1.cam & mic; 2.screen; 3.screen & cam & mic
 	socket.on('call', function(message) {
-		log('call userid' + message.userid + ', type is ' + message.streamtype);
+		log(meassage.from + 'call userid' + message.to + ', type is ' + message.streamtype);
 		
 		// 遍历找到该用户并回复之
 		io.sockets.clients().forEach(function (socketClient) {
-			if (socketClient.name === message.userid) {
-				socketClient.emit('call', { streamtype: message.streamtype, userid: client.userid } );
+			if (socketClient.name === message.to) {
+				socketClient.emit('call', { streamtype: message.streamtype, from: client.userid, to: message.from } );
 			}
 		});
 	});
@@ -296,6 +302,9 @@ io.sockets.on('connection', function (socket) {
 		client.userid = '';
 		client.username = '';
 		client.roomid = '';
+		client.cameraSharing = false;
+		client.microphoneSharing = false;
+		client.screenSharing = false;
 		
 		var rMessage = {
 			result: true,
@@ -329,6 +338,9 @@ io.sockets.on('connection', function (socket) {
 		client.userid = '';
 		client.username = '';
 		client.roomid = '';
+		client.cameraSharing = false;
+		client.microphoneSharing = false;
+		client.screenSharing = false;
 		
 		var rMessage = {
 			result: true,
@@ -338,7 +350,6 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 收到文字消息
-	// 
 	socket.on('textmessage', function(text) {
 		
 		if (client.userid === '' || client.roomid === '') {
@@ -359,6 +370,19 @@ io.sockets.on('connection', function (socket) {
 		io.sockets.in(client.roomid).emit('textmessage', rMessage); // 房间内群发
 	});
 
+	// 设备共享状态更新
+	socket.on('sharecam', function(message) {
+		client.cameraSharing = message.cameraSharing;
+		client.microphoneSharing = message.microphoneSharing;
+		io.sockets.in(client.roomid).emit('sharecam', message); // 房间内群发
+	});
+	
+	// 设备共享状态更新
+	socket.on('sharescreen', function(message) {
+		client.screenSharing = message.screenSharing;
+		io.sockets.in(client.roomid).emit('sharescreen', message); // 房间内群发
+	});
+	
 });
 
 function getTime() {
