@@ -142,9 +142,11 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 将candidate告知对方
-	// message.event  => candidate event
 	// message.from => to whom
 	// message.to
+	// candidate
+	// streamtype
+	// tag => offer tag
 	socket.on('candidate', function(message) {
 		log('candidate from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {

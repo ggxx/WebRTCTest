@@ -24,7 +24,7 @@ sendMessageButton.onclick = sendMessage;
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.0.99');
+var socket = io.connect('https://192.168.0.123');
 socket.on('open', function() {
 
 	console.log('服务器连接成功');
@@ -121,17 +121,17 @@ socket.on('open', function() {
 				console.log('no media stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-media'] = buildRtcPeerConnection(message.from, message.streamtype);
-			rtcPeerConnections[message.from + '-media'].addStream(mediaStream);
+			rtcPeerConnections[message.from + '-offer-media'] = buildRtcPeerConnection(message.from, message.streamtype);
+			rtcPeerConnections[message.from + '-offer-media'].addStream(mediaStream);
 			switch (message.streamtype) {
 				case 1:
-					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, videoOnlyOfferConstraints);
+					rtcPeerConnections[message.from + '-offer-media'].createOffer(rtcPeerConnections[message.from + '-offer-media'].onoffercreated, onError, videoOnlyOfferConstraints);
 					break;
 				case 2:
-					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, audioOnlyOfferConstraints);
+					rtcPeerConnections[message.from + '-offer-media'].createOffer(rtcPeerConnections[message.from + '-offer-media'].onoffercreated, onError, audioOnlyOfferConstraints);
 					break;
 				case 3:
-					rtcPeerConnections[message.from + '-media'].createOffer(rtcPeerConnections[message.from + '-media'].onoffercreated, onError, offerConstraints);
+					rtcPeerConnections[message.from + '-offer-media'].createOffer(rtcPeerConnections[message.from + '-offer-media'].onoffercreated, onError, offerConstraints);
 					break;
 			}
 		}
@@ -140,9 +140,9 @@ socket.on('open', function() {
 				console.log('no screen stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-screen'] = buildRtcPeerConnection(message.from, message.streamtype);
-			rtcPeerConnections[message.from + '-screen'].addStream(screenStream);
-			rtcPeerConnections[message.from + '-screen'].createOffer(rtcPeerConnections[message.from + '-screen'].onoffercreated, onError, videoOnlyOfferConstraints);
+			rtcPeerConnections[message.from + '-offer-screen'] = buildRtcPeerConnection(message.from, message.streamtype);
+			rtcPeerConnections[message.from + '-offer-screen'].addStream(screenStream);
+			rtcPeerConnections[message.from + '-offer-screen'].createOffer(rtcPeerConnections[message.from + '-offer-screen'].onoffercreated, onError, videoOnlyOfferConstraints);
 		}
 		else {
 			console.log('message.streamtype (' + message.streamtype + ') is wrong');
@@ -153,13 +153,14 @@ socket.on('open', function() {
 	// to
 	// candidate
 	// streamtype
+	// tag
 	socket.on('candidate', function(message) {
 		console.log('socket on candidate');
 		var candidate = new RTCIceCandidate({
 			sdpMLineIndex: message.candidate.sdpMLineIndex,
 			candidate: message.candidate.candidate
 		});
-		getRTCPeerConnection(message.from, message.streamtype).addIceCandidate(candidate);
+		getRTCPeerConnection(message.from, message.streamtype, !message.tag).addIceCandidate(candidate);
 	});
 	
 	// from
@@ -168,8 +169,7 @@ socket.on('open', function() {
 	// streamtype
 	socket.on('offer', function(message) {
 		console.log('socket on offer');
-		console.log('>>> setRemoteDescription offer');
-		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype);
+		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, false);
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp), rtcPeerConnection.onremotesdpset, onError);
 	});
 	
@@ -179,8 +179,7 @@ socket.on('open', function() {
 	// streamtype
 	socket.on('answer', function(message) {
 		console.log('socket on answer');
-		console.log('>>> setRemoteDescription answer');
-		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype);
+		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, true);
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
 	});
 	
@@ -299,7 +298,7 @@ function call(userid, type) {
 		streamtype: type
 	};
 
-	var tmp = (type === 4) ? '-screen' : '-media';
+	var tmp = (type === 4) ? '-answer-screen' : '-answer-media';
 	rtcPeerConnections[userid + tmp] = buildRtcPeerConnection(userid, type);
 	
 	console.log('send socket message: call');
@@ -342,8 +341,8 @@ var screenConstraints = {
 	video: {
 		mandatory: {
 			chromeMediaSource: 'screen',
-			maxWidth: 1920,
-			maxHeight: 1080
+			maxWidth: 1280,
+			maxHeight: 800
 		},
 		optional: []
 	}
@@ -459,9 +458,10 @@ var offerSDPs = { };
 var answerSDPs = { };
 var targetUserIds = { };
 
-function getRTCPeerConnection(id, type) {
-	var tmp = (type === 4) ? '-screen' : '-media';
-	return rtcPeerConnections[id + tmp];
+function getRTCPeerConnection(id, type, isOffer) {
+	var tmp1 = (isOffer === true) ? '-offer' : '-answer';
+	var tmp2 = (type === 4) ? '-screen' : '-media';
+	return rtcPeerConnections[id + tmp1 + tmp2];
 }
 
 function buildRtcPeerConnection(id, type) {	
@@ -469,13 +469,14 @@ function buildRtcPeerConnection(id, type) {
 	rtcPeerConnection.onicecandidate = handleIceCandidate;
 	rtcPeerConnection.onaddstream = handleRemoteStreamAdded;
 	rtcPeerConnection.onremovestream = handleRemoteStreamRemoved;
+	rtcPeerConnection.oniceconnectionstatechange = handleIceConnectionStateChange;
 	
 	// custom function
 	rtcPeerConnection.onremotesdpset = onRemoteSDPSet;
 	rtcPeerConnection.onoffercreated = onOfferCreated;
 	
 	function handleIceCandidate(event) {
-		//console.log('handleIceCandidate event: ');
+		console.log('handleIceCandidate event');
 		if (event.candidate) {
 			var candidate = {
 				sdpMLineIndex: event.candidate.sdpMLineIndex,
@@ -483,7 +484,9 @@ function buildRtcPeerConnection(id, type) {
 			var rMessage = {
 				from: USER_ID,
 				to: id,
-				candidate: candidate
+				candidate: candidate,
+				streamtype: type,
+				tag: (rtcPeerConnection.remoteDescription == null && rtcPeerConnection.localDescription != null) ? true : false
 			};
 			console.log('send socket message: candidate');
 			socket.emit('candidate', rMessage);
@@ -495,7 +498,6 @@ function buildRtcPeerConnection(id, type) {
 	function onOfferCreated(sdp) {
 		console.log('onOfferCreated');
 		rtcPeerConnection.offerSDP = sdp;
-		console.log('>>> setLocalDescription offer');
 		rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
 	}
 	
@@ -507,7 +509,6 @@ function buildRtcPeerConnection(id, type) {
 	function onAnswerCreated(sdp) {
 		console.log('onAnswerCreated');
 		rtcPeerConnection.answerSDP = sdp;
-		console.log('>>> setLocalDescription answer');
 		rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
 	}
 	
@@ -538,9 +539,7 @@ function buildRtcPeerConnection(id, type) {
 }
 
 function handleRemoteStreamAdded(event) {
-	//console.log('handleRemoteStreamAdded');
-	
-	console.log('>>> now we can play video!');
+	console.log('handleRemoteStreamAdded');
 	attachMediaStream(remoteCam, event.stream);
 	
 	// TODO: Mix Audio from remote stream & local mic
@@ -551,6 +550,11 @@ function handleRemoteStreamRemoved(event) {
 	console.log('handleRemoteStreamRemoved');
 	
 	// TODO: Stop recording
+}
+
+function handleIceConnectionStateChange(e) {
+	console.log('handleIceConnectionStateChange');
+	console.log(e);
 }
 
 function onError(error){
