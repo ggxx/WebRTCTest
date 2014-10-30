@@ -89,14 +89,14 @@ socket.on('open', function() {
 		}
 	});
 	
-	// 
+	// 更新状态
 	socket.on('sharecam', function(message) {
-		
+		refreshUserDeviceDOM(message.userid, message.username, message.cameraSharing, message.microphoneSharing);
 	});
 	
-	// 收到
+	// 更新状态
 	socket.on('sharescreen', function(message) {
-		
+		refreshUserDeviceDOM(message.userid, message.username, '', '', message.screenSharing);
 	});
 	
 	socket.on('textmessage', function(message) {
@@ -579,11 +579,41 @@ function refreshUserListDOM(users) {
 	var ul = document.getElementById('userlist');
 	ul.innerHTML = '';
 	for (var i = 0; i < users.length; i++) {
+		if (users[i].userid === USER_ID) {
+			continue;
+		}
 		var li = document.createElement('li');
+		li.id = users.userid + '-li';
 		li.innerHTML = '<span>' + users[i].username + '</span>';
-		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\', 3)"><img src="images/cam.png"  /></a>';
-		li.innerHTML += '<a href="javascript:call(\''+ users[i].userid +'\', 4)"><img src="images/screen.png"  /></a>';
+		li.innerHTML += '<a id="' + users[i].userid + '-cam' + '" href="javascript:call(\''+ users[i].userid +'\', 3)" class="disabledlink"><img src="images/cam.png"  /></a>';
+		li.innerHTML += '<a id="' + users[i].userid + '-scr' + '" href="javascript:call(\''+ users[i].userid +'\', 4)" class="disabledlink"><img src="images/screen.png"  /></a>';
 		ul.appendChild(li);
+	}
+}
+
+// 更新一个用户的共享状态
+function refreshUserDeviceDOM(id, name, cam, mic, scr) {
+	if (id === USER_ID) {
+		return;
+	}
+	
+	var camlink = document.getElementById(id + '-cam');
+	var scrlink = document.getElementById(id + '-scr');
+	if (cam === true) {
+		camlink.setAttribute('class', 'enabledlink');
+		camlink.href = 'javascript:call("'+ id +'", 3)';
+	}
+	else if (cam === false) {
+    	camlink.setAttribute('class', 'disabledlink');
+		camlink.href = 'javascript:void(0)';
+	}
+	if (scr === true) {
+		scrlink.setAttribute('class', 'enabledlink');
+		scrlink.href = 'javascript:call("'+ id +'", 4)';
+	}
+	else if (scr === false) {
+    	scrlink.setAttribute('class', 'disabledlink');
+		scrlink.href = 'javascript:void(0)';
 	}
 }
 

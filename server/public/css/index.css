@@ -165,7 +165,7 @@ html,body {
 	overflow: hidden;
 }
 
-#users ul li a {
+#users ul li a.enabledlink {
 	float: right;
 	border-left: 1px solid #8cf;
 	border-right: 1px solid #1b435e;
@@ -180,14 +180,29 @@ html,body {
 	vertical-align: middle;
 }
 
-#users ul li a:hover {
+#users ul li a.enabledlink:hover {
 	border-top-color: #28597a;
 	background: #28597a;
 	color: #ccc;
 }
-#users ul li a:active {
+#users ul li a.enabledlink:active {
 	border-top-color: #1b435e;
 	background: #1b435e;
+}
+
+#users ul li a.disabledlink {
+	float: right;
+	border-left: 1px solid #8cf;
+	border-right: 1px solid #1b435e;
+	border-top: 1px solid #8cf;
+	border-bottom: 1px solid #1b435e;
+	background: #ccc;
+	padding: 18px 5px;
+	color: white;
+	width: 20px;
+	/*font-size: 18px;*/
+	text-decoration: none;
+	vertical-align: middle;
 }
 
 #content {

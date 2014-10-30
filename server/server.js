@@ -381,7 +381,13 @@ io.sockets.on('connection', function (socket) {
 	socket.on('sharecam', function(message) {
 		client.cameraSharing = message.cameraSharing;
 		client.microphoneSharing = message.microphoneSharing;
-		io.sockets.in(client.roomid).emit('sharecam', message); // 房间内群发
+		var rMessage = {
+			cameraSharing:  message.cameraSharing,
+			microphoneSharing: message.microphoneSharing,
+			userid: message.userid,
+			username: getUser(message.userid).username
+		};
+		io.sockets.in(client.roomid).emit('sharecam', rMessage); // 房间内群发
 	});
 	
 	// 设备共享状态更新
@@ -389,7 +395,12 @@ io.sockets.on('connection', function (socket) {
 	// screenSharing => true, false
 	socket.on('sharescreen', function(message) {
 		client.screenSharing = message.screenSharing;
-		io.sockets.in(client.roomid).emit('sharescreen', message); // 房间内群发
+		var rMessage = {
+			screenSharing: message.screenSharing,
+			userid: message.userid,
+			username: getUser(message.userid).username
+		};
+		io.sockets.in(client.roomid).emit('sharescreen', rMessage); // 房间内群发
 	});
 	
 });
