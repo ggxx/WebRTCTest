@@ -211,6 +211,26 @@ html,body {
 	background-color: #eee;
 	margin: 0 200px;
 	height: 800px;
+	min-width: 800px;
+}
+
+#videos {
+	margin: 0 auto;
+	width: 800px;
+}
+
+#video_main {
+	float: left;
+	width: 600px;
+	height: 600px;
+	background-color: Blue;
+}
+
+#video_right {
+	float: right;
+	width: 200px;
+	height: 600px;
+	background-color: Green;
 }
 
 #logs {
@@ -246,7 +266,7 @@ html,body {
 	color: #eee;
 	clear: both;
 	background-color: #333;
-	height: 100px;
+	height: 80px;
 	overflow: hidden;
 	text-align: center;
 	padding-top: 15px;

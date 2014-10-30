@@ -24,7 +24,7 @@ sendMessageButton.onclick = sendMessage;
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.0.123');
+var socket = io.connect('https://192.168.0.99');
 socket.on('open', function() {
 
 	console.log('服务器连接成功');
@@ -255,6 +255,8 @@ function getUsers(roomid) {
 function leaveRoom() {
 	//console.log('leaveroom');
 	console.log('send socket message: leaveroom');
+	mediaStream.close();
+	screenStream.close();
 	socket.emit('leaveroom');
 }
 
@@ -316,7 +318,6 @@ function sendMessage() {
 ///---------------USER MEDIA-----------------
 
 var isCamSharing = false, isScreenSharing = false;
-var camaStreamId, screenStreamId;
 var mediaStream, screenStream;
 var camConstraints = { 
 	audio: {
