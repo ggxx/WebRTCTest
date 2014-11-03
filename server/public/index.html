@@ -14,7 +14,7 @@
 		</div>
 		
 		<div id="rooms">
-			<h2>Settings</h2>
+			<h2>User Information</h2>
 			<input id="userNameInput" maxlength="16" type="text" placeholder="UserName" class="textbox" />
 			<input id="roomNameInput" maxlength="16" type="text" placeholder="RoomName" class="textbox" />
 			<a href="javascript:void(0)" id="createRoomButton" class="sidebarbutton">CreateRoom</a>
@@ -24,7 +24,20 @@
 		</div>
 		
 		<div id="users">
-			<a href="javascript:void(0)" id="shareCamButton" class="sidebarbutton">ShareCam</a>
+			<div id="settingHeader">Device Setting</div>
+			<div id="setting">
+				<p>
+					Camera<br />
+					<input id="camWidthInput" min="1" max="1920" type="number" value="640" />
+					<input id="camHeightInput" min="1" max="1080" type="number" value="360" />
+				</p>
+				<p>
+					Screen<br />
+					<input id="scrWidthInput" min="1" max="1920" type="number" value="1920" />
+					<input id="scrHeightInput" min="1" max="1080" type="number" value="1080" />
+				</p>
+			</div>
+			<a href="javascript:void(0)" id="shareCamButton" class="sidebarbutton">ShareCamera</a>
 			<a href="javascript:void(0)" id="shareScreenButton" class="sidebarbutton">ShareScreen</a>
 			<h2 id="roomNameLabel">No room</h2>
 			<ul id="userlist">

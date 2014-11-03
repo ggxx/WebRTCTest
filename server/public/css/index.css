@@ -40,6 +40,7 @@ html,body {
 	margin: 0;
 	/*margin: 20px 10px 0 10px;*/
 	color: #111;
+	font-size: 14pt;
 }
 
 #rooms .textbox {
@@ -120,6 +121,36 @@ html,body {
 	margin: 0;
 }
 
+#settingHeader {
+	cursor: pointer;
+	border-top: 1px solid #8cf;
+	border-bottom: 1px solid #1b435e;
+	background-color: #65a9d7;
+	padding: 18px 0;
+	color: white;
+	/*font-size: 18px;*/
+	text-align: center;
+	text-decoration: none;
+	vertical-align: middle;
+}
+
+#settingHeader:hover {
+	border-top-color: #28597a;
+	background: #28597a;
+	color: #ccc;
+}
+#settingHeader:active {
+	border-top-color: #1b435e;
+	background: #1b435e;
+}
+
+#setting {
+	background-color: White;
+	border: 3px solid #65a9d7;
+	padding: 5px;
+	color: #111;
+}
+
 #users {
 	width: 200px;
 	float: right;  
@@ -134,6 +165,7 @@ html,body {
 	margin: 0;
 	/*margin: 20px 10px 0 10px;*/
 	color: #111;
+	font-size: 14pt;
 }
 
 #users ul {

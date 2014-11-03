@@ -17,6 +17,13 @@ var remoteScr = document.getElementById('remoteScr');
 var localCam = document.getElementById('localCam');
 var localScr = document.getElementById('localScr');
 
+var settingHeader = document.getElementById('settingHeader');
+
+var camWidthInput = document.getElementById('camWidthInput');
+var camHeightInput = document.getElementById('camHeightInput');
+var scrWidthInput = document.getElementById('scrWidthInput');
+var scrHeightInput = document.getElementById('scrHeightInput');
+
 createRoomButton.onclick = createRoom;
 leaveRoomButton.onclick = leaveRoom;
 shareCamButton.onclick = shareCam;
@@ -24,7 +31,12 @@ shareScreenButton.onclick = shareScreen;
 sendMessageButton.onclick = sendMessage;
 
 messageInput.onkeydown = pressEnterToSendMessage;
+window.onload = loadedWindow;
 window.onbeforeunload = closingWindow;
+settingHeader.onclick = toggle;
+
+
+
 
 
 ///--------------SOCKET.IO------------------
@@ -202,10 +214,6 @@ socket.on('open', function() {
 
 ///--------------LOGIC----------------
 
-function closingWindow() {
-	return '提示';
-}
-
 function getRooms() {
 	//console.log('getRooms');
 	//console.log('send socket message: rooms');
@@ -340,41 +348,41 @@ function pressEnterToSendMessage(e) {
 var isCamSharing = false, isScreenSharing = false;
 var mediaStream, screenStream;
 var remoteCameraStream, remoteScreenStream;
-var camConstraints = { 
-	audio: {
-		optional: [],
-		mandatory: {
-			//googEchoCancellation: true
-			//"googAutoGainControl": "false",
-			//"googNoiseSuppression": "false",
-			//"googHighpassFilter": "false"
-		}
-	}, 
-	video: {
-		mandatory: {
-			maxWidth: 640,
-			maxHeight: 360
-		},
-		optional: []
-	}
-};
-var screenConstraints = {
-	audio: false, //100年后，当chrome的桌面共享支持声音时，可改为true
-	video: {
-		mandatory: {
-			chromeMediaSource: 'screen',
-			maxWidth: 1920,
-			maxHeight: 1080
-		},
-		optional: []
-	}
-};
 
 function initCamera() {
+	var camConstraints = { 
+		audio: {
+			optional: [],
+			mandatory: {
+				//googEchoCancellation: true
+				//"googAutoGainControl": "false",
+				//"googNoiseSuppression": "false",
+				//"googHighpassFilter": "false"
+			}
+		}, 
+		video: {
+			mandatory: {
+				maxWidth: camWidthInput.value || 640,
+				maxHeight: camHeightInput.value || 360
+			},
+			optional: []
+		}
+	};
 	getUserMedia(camConstraints, gotCamera, gotCameraError);
 }
 
 function initScreen() {
+	var screenConstraints = {
+		audio: false, //100年后，当chrome的桌面共享支持声音时，可改为true
+		video: {
+			mandatory: {
+				chromeMediaSource: 'screen',
+				maxWidth: scrWidthInput.value || 1920,
+				maxHeight: scrHeightInput.value || 1080
+			},
+			optional: []
+		}
+	};
 	getUserMedia(screenConstraints, gotScreen, gotScreenError);
 }
 
@@ -409,7 +417,8 @@ function gotScreen(stream) {
 	socket.emit('sharescreen', rMessage);
 }
 
-function gotScreenError(stream) {
+function gotScreenError(error) {
+	console.log('gotScreenError');
 	stopSharingScreen();
 }
 
@@ -618,7 +627,17 @@ function onError(error){
 	//console.log('onError', error);
 }
 
+
 ///--------------DOM----------------
+
+function closingWindow() {
+	return '提示';
+}
+
+function loadedWindow() {
+	document.getElementById('setting').style.display = 'none';
+}
+
 
 // 更新room名称DOM
 function refreshRoomDOM(room) {
@@ -700,4 +719,11 @@ function refreshMessageListDOM(time, from, text, color) {
 	}
 	div.appendChild(p);
 	div.scrollTop = div.scrollHeight;
+}
+
+// 折叠设置区域
+function toggle() {
+	//console.log('toggle');
+	var div = document.getElementById('setting');
+	div.style.display = (div.style.display == "none") ? "block" : "none";
 }
