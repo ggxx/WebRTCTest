@@ -13,7 +13,9 @@ var userNameInput = document.getElementById('userNameInput');
 var messageInput = document.getElementById('messageInput');
 
 var remoteCam = document.getElementById('remoteCam');
-/*var localCam = document.getElementById('localCam');*/
+var remoteScr = document.getElementById('remoteScr');
+var localCam = document.getElementById('localCam');
+var localScr = document.getElementById('localScr');
 
 createRoomButton.onclick = createRoom;
 leaveRoomButton.onclick = leaveRoom;
@@ -21,28 +23,33 @@ shareCamButton.onclick = shareCam;
 shareScreenButton.onclick = shareScreen;
 sendMessageButton.onclick = sendMessage;
 
+messageInput.onkeydown = pressEnterToSendMessage;
+window.onbeforeunload = closingWindow;
+
 
 ///--------------SOCKET.IO------------------
 
 var socket = io.connect('https://192.168.0.99');
 socket.on('open', function() {
 
-	console.log('服务器连接成功');
+	//console.log('服务器连接成功');
 	
 	socket.on('bind', function(v){
-		console.log('socket on bind');
+		//console.log('socket on bind');
 	});
 	
 	// 服务器返回房间列表
 	socket.on('rooms', function(rooms) {
-		console.log('socket on rooms');
+		//console.log('socket on rooms');
+		
 		// 更新房间列表
 		refreshRoomListDOM(rooms);
 	});
 	
 	// 服务器返回用户列表
 	socket.on('users', function(users) {
-		console.log('socket on users');
+		//console.log('socket on users');
+		
 		// 更新房间内的用户列表
 		refreshUserListDOM(users);
 	});
@@ -52,7 +59,7 @@ socket.on('open', function() {
 	// message.text   => 创建失败的原因
 	// message.room   => 创建的room
 	socket.on('createroom', function(message) {
-		console.log('socket on createroom');
+		//console.log('socket on createroom');
 		if (message.result === true) {
 			refreshRoomDOM(message.room);
 			joinRoom(message.room.roomid);
@@ -67,7 +74,7 @@ socket.on('open', function() {
 	// message.text   => 操作失败的原因
 	// message.room   => 进入的room
 	socket.on('joinroom', function(message) {
-		console.log('socket on joinroom');
+		//console.log('socket on joinroom');
 		if (message.result === true) {
 			refreshRoomDOM(message.room);
 			getUsers(message.room.roomid);
@@ -82,7 +89,7 @@ socket.on('open', function() {
 	// message.text   => 操作失败的原因
 	// message.closed => room是否因无user而关闭
 	socket.on('leaveroom', function(message) {
-		console.log('socket on leaveroom');
+		//console.log('socket on leaveroom');
 		if (message.result === true) {
 			refreshRoomDOM();
 			refreshUserListDOM([]);
@@ -100,12 +107,13 @@ socket.on('open', function() {
 	});
 	
 	socket.on('textmessage', function(message) {
-		console.log('socket on textmessage');
+		//console.log('socket on textmessage');
 		if (message.result === true) {
 			refreshMessageListDOM(message.time, message.from, message.text, message.color);
+			messageInput.value = '';
 		}
 		else {
-			refreshMessageListDOM(message.time, '消息发送失败', message.text);
+			refreshMessageListDOM(message.time, '发送失败',  message.text, 'Red');
 		}
 	});
 	
@@ -114,14 +122,14 @@ socket.on('open', function() {
 	// to
 	// streamtype => 1.camera, 2.microphone, 3.cam & mic, 4.screen
 	socket.on('call', function(message) {
-		console.log('socket on call');
+		//console.log('socket on call');
 		
 		if (message.streamtype === 1 || message.streamtype === 2 || message.streamtype === 3) {
 			if (!mediaStream) {
 				console.log('no media stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-offer-media'] = buildRtcPeerConnection(message.from, message.streamtype);
+			rtcPeerConnections[message.from + '-offer-media'] = buildRtcPeerConnection(message.from, message.streamtype, true);
 			rtcPeerConnections[message.from + '-offer-media'].addStream(mediaStream);
 			switch (message.streamtype) {
 				case 1:
@@ -140,7 +148,7 @@ socket.on('open', function() {
 				console.log('no screen stream');
 				return;
 			}
-			rtcPeerConnections[message.from + '-offer-screen'] = buildRtcPeerConnection(message.from, message.streamtype);
+			rtcPeerConnections[message.from + '-offer-screen'] = buildRtcPeerConnection(message.from, message.streamtype, true);
 			rtcPeerConnections[message.from + '-offer-screen'].addStream(screenStream);
 			rtcPeerConnections[message.from + '-offer-screen'].createOffer(rtcPeerConnections[message.from + '-offer-screen'].onoffercreated, onError, videoOnlyOfferConstraints);
 		}
@@ -155,11 +163,11 @@ socket.on('open', function() {
 	// streamtype
 	// tag
 	socket.on('candidate', function(message) {
-		console.log('socket on candidate');
+		//console.log('socket on candidate');
 		var candidate = new RTCIceCandidate({
 			sdpMLineIndex: message.candidate.sdpMLineIndex,
 			candidate: message.candidate.candidate
-		});
+		});	
 		getRTCPeerConnection(message.from, message.streamtype, !message.tag).addIceCandidate(candidate);
 	});
 	
@@ -168,7 +176,7 @@ socket.on('open', function() {
 	// sdp
 	// streamtype
 	socket.on('offer', function(message) {
-		console.log('socket on offer');
+		//console.log('socket on offer');
 		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, false);
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp), rtcPeerConnection.onremotesdpset, onError);
 	});
@@ -178,13 +186,13 @@ socket.on('open', function() {
 	// sdp
 	// streamtype
 	socket.on('answer', function(message) {
-		console.log('socket on answer');
+		//console.log('socket on answer');
 		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, true);
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
 	});
 	
 	
-	console.log('send socket message: bind');
+	//console.log('send socket message: bind');
 	socket.emit('bind', USER_ID);
 	
 	// 刷新房间列表
@@ -194,9 +202,13 @@ socket.on('open', function() {
 
 ///--------------LOGIC----------------
 
+function closingWindow() {
+	return '提示';
+}
+
 function getRooms() {
 	//console.log('getRooms');
-	console.log('send socket message: rooms');
+	//console.log('send socket message: rooms');
 	socket.emit('rooms');
 }
 
@@ -221,7 +233,7 @@ function createRoom() {
 		roomname: roomNameInput.value || 'NoNameRoom',
 		roomtype: ''
 	};
-	console.log('send socket message: createroom');
+	//console.log('send socket message: createroom');
 	socket.emit('createroom', room);
 }
 
@@ -236,27 +248,29 @@ function joinRoom(roomid) {
 	roomNameInput.setAttribute('class', 'textbox');
 	userNameInput.setAttribute('class', 'textbox');
 	
-	var user = {
+	var message = {
 		userid: USER_ID,
 		username: userNameInput.value || 'NoNameUser',
 		roomid: roomid,
 		ice: { }
 	};
-	console.log('send socket message: joinroom');
-	socket.emit('joinroom', user);
+	//console.log('send socket message: joinroom');
+	socket.emit('joinroom', message);
 }
 
 function getUsers(roomid) {
 	//console.log('getUsers');
-	console.log('send socket message: users');
+	
+	//console.log('send socket message: users');
 	socket.emit('users', roomid);
 }
 
 function leaveRoom() {
 	//console.log('leaveroom');
-	console.log('send socket message: leaveroom');
-	mediaStream.close();
-	screenStream.close();
+	if (mediaStream) { mediaStream.stop(); }
+	if (screenStream) { screenStream.stop(); }
+	
+	//console.log('send socket message: leaveroom');
 	socket.emit('leaveroom');
 }
 
@@ -281,13 +295,13 @@ function shareScreen() {
 // type => 1.cam & mic; 2.screen; 3.screen & cam & mic
 function share(type) {
 	//console.log('share');
-	console.log('send socket message: share');
+	//console.log('send socket message: share');
 	socket.emit('share', type);
 }
 
 function stopSharing() {
 	//console.log('stopsharing');
-	console.log('send socket message: stopsharing');
+	//console.log('send socket message: stopsharing');
 	socket.emit('stopsharing');
 }
 
@@ -301,9 +315,9 @@ function call(userid, type) {
 	};
 
 	var tmp = (type === 4) ? '-answer-screen' : '-answer-media';
-	rtcPeerConnections[userid + tmp] = buildRtcPeerConnection(userid, type);
+	rtcPeerConnections[userid + tmp] = buildRtcPeerConnection(userid, type, false);
 	
-	console.log('send socket message: call');
+	//console.log('send socket message: call');
 	socket.emit('call', message);
 }
 
@@ -314,11 +328,18 @@ function sendMessage() {
 	}
 }
 
+function pressEnterToSendMessage(e) {
+	if (e.keyCode == 13) {
+		sendMessage();
+	}
+}
+
 
 ///---------------USER MEDIA-----------------
 
 var isCamSharing = false, isScreenSharing = false;
 var mediaStream, screenStream;
+var remoteCameraStream, remoteScreenStream;
 var camConstraints = { 
 	audio: {
 		optional: [],
@@ -331,8 +352,8 @@ var camConstraints = {
 	}, 
 	video: {
 		mandatory: {
-			maxWidth: 800,
-			maxHeight: 450
+			maxWidth: 640,
+			maxHeight: 360
 		},
 		optional: []
 	}
@@ -342,8 +363,8 @@ var screenConstraints = {
 	video: {
 		mandatory: {
 			chromeMediaSource: 'screen',
-			maxWidth: 1280,
-			maxHeight: 800
+			maxWidth: 1920,
+			maxHeight: 1080
 		},
 		optional: []
 	}
@@ -359,6 +380,7 @@ function initScreen() {
 
 function gotCamera(stream) {
 	//console.log('gotCamera');
+	attachMediaStream(localCam, stream);
 	mediaStream = stream;
 	isCamSharing = true;
 	shareCamButton.innerHTML = 'StopSharingCam';
@@ -376,6 +398,7 @@ function gotCameraError(error) {
 
 function gotScreen(stream) {
 	//console.log('gotScreen');
+	attachMediaStream(localScr, stream);
 	screenStream = stream;
 	isScreenSharing = true;
 	shareScreenButton.innerHTML = 'StopSharingScreen';
@@ -396,7 +419,7 @@ function stopSharingCamera() {
 	}
 	mediaStream = null;
 	isCamSharing = false;
-	shareCamButton.innerHTML = 'ShareCam';
+	shareCamButton.innerHTML = 'ShareCamera';
 	var rMessage = {
 		userid: USER_ID,
 		cameraSharing: false,
@@ -454,10 +477,8 @@ var offerConstraints = {
 };
 
 var rtcPeerConnections = { };
-var targetPeers = { };
 var offerSDPs = { };
 var answerSDPs = { };
-var targetUserIds = { };
 
 function getRTCPeerConnection(id, type, isOffer) {
 	var tmp1 = (isOffer === true) ? '-offer' : '-answer';
@@ -465,19 +486,22 @@ function getRTCPeerConnection(id, type, isOffer) {
 	return rtcPeerConnections[id + tmp1 + tmp2];
 }
 
-function buildRtcPeerConnection(id, type) {	
+function buildRtcPeerConnection(id, type, isOffer) {	
 	var rtcPeerConnection = new RTCPeerConnection(iceServers, optionalRtpDataChannels);
 	rtcPeerConnection.onicecandidate = handleIceCandidate;
 	rtcPeerConnection.onaddstream = handleRemoteStreamAdded;
 	rtcPeerConnection.onremovestream = handleRemoteStreamRemoved;
 	rtcPeerConnection.oniceconnectionstatechange = handleIceConnectionStateChange;
+	rtcPeerConnection.onreadystatechange = handleReadyStateChange;
 	
 	// custom function
 	rtcPeerConnection.onremotesdpset = onRemoteSDPSet;
 	rtcPeerConnection.onoffercreated = onOfferCreated;
+	rtcPeerConnection.isoffer = isOffer;
+	
 	
 	function handleIceCandidate(event) {
-		console.log('handleIceCandidate event');
+		//console.log('handleIceCandidate event');
 		if (event.candidate) {
 			var candidate = {
 				sdpMLineIndex: event.candidate.sdpMLineIndex,
@@ -487,9 +511,8 @@ function buildRtcPeerConnection(id, type) {
 				to: id,
 				candidate: candidate,
 				streamtype: type,
-				tag: (rtcPeerConnection.remoteDescription == null && rtcPeerConnection.localDescription != null) ? true : false
+				tag: rtcPeerConnection.isoffer
 			};
-			console.log('send socket message: candidate');
 			socket.emit('candidate', rMessage);
 		} else {
 			console.log('End of candidates.');
@@ -497,24 +520,24 @@ function buildRtcPeerConnection(id, type) {
 	}
 	
 	function onOfferCreated(sdp) {
-		console.log('onOfferCreated');
+		//console.log('onOfferCreated');
 		rtcPeerConnection.offerSDP = sdp;
 		rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
 	}
 	
 	function onRemoteSDPSet() {
-		console.log('onRemoteSDPSet');
+		//console.log('onRemoteSDPSet');
 		rtcPeerConnection.createAnswer(onAnswerCreated, onError);
 	}
 	
 	function onAnswerCreated(sdp) {
-		console.log('onAnswerCreated');
+		//console.log('onAnswerCreated');
 		rtcPeerConnection.answerSDP = sdp;
 		rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
 	}
 	
 	function onOfferSDPSet() {
-		console.log('onOfferSDPSet');
+		//console.log('onOfferSDPSet');
 		var message = {
 			from: USER_ID,
 			to: id,
@@ -532,34 +555,67 @@ function buildRtcPeerConnection(id, type) {
 			sdp: rtcPeerConnection.answerSDP,
 			streamtype: type
 		};
-		console.log('send socket message: answer');
+		//console.log('send socket message: answer');
 		socket.emit('answer', message);
+	}
+	
+	function handleRemoteStreamAdded(event) {
+		//console.log('handleRemoteStreamAdded');
+		if (type === 4) {
+			remoteScreenStream = event.stream;
+			attachMediaStream(remoteScr, remoteScreenStream);
+		} 
+		else {
+			remoteCameraStream = event.stream;
+			attachMediaStream(remoteCam, remoteCameraStream);
+		}
+	
+		// TODO: Mix Audio from remote stream & local mic
+		// TODO: Record video & audio to local disk, then upload to media-storage-server
+	}
+	
+	function handleIceConnectionStateChange(event) {
+		//console.log('handleIceConnectionStateChange');
+		if (rtcPeerConnection.iceConnectionState === 'disconnected') {
+			if (type === 4) {
+				if (screenStream) {
+					rtcPeerConnection.removeStream(screenStream);
+				}
+				if (remoteScreenStream) {
+					rtcPeerConnection.removeStream(remoteScreenStream);
+					remoteScreenStream.stop();
+					remoteScreenStream = null;
+				} 
+			}
+			else if (type >= 1 && type <= 3) {
+				if (mediaStream) {
+					rtcPeerConnection.removeStream(mediaStream);
+				}
+				if (remoteCameraStream) {
+					rtcPeerConnection.removeStream(remoteCameraStream);
+					remoteCameraStream.stop();
+					remoteCameraStream = null;
+				}
+			}
+		}
 	}
 	
 	return rtcPeerConnection;
 }
 
-function handleRemoteStreamAdded(event) {
-	console.log('handleRemoteStreamAdded');
-	attachMediaStream(remoteCam, event.stream);
-	
-	// TODO: Mix Audio from remote stream & local mic
-	// TODO: Record video & audio to local disk, then upload to media-storage-server
-}
-
 function handleRemoteStreamRemoved(event) {
-	console.log('handleRemoteStreamRemoved');
+	//console.log('handleRemoteStreamRemoved');
 	
 	// TODO: Stop recording
 }
 
-function handleIceConnectionStateChange(e) {
-	console.log('handleIceConnectionStateChange');
-	console.log(e);
+function handleReadyStateChange(event) {
+	//console.log('handleReadyStateChange');
+	//console.log(event);
 }
 
 function onError(error){
-	console.log('onError', error);
+	//console.log('onError', error);
 }
 
 ///--------------DOM----------------
@@ -593,6 +649,7 @@ function refreshUserListDOM(users) {
 		li.innerHTML += '<a id="' + users[i].userid + '-cam' + '" href="javascript:call(\''+ users[i].userid +'\', 3)" class="disabledlink"><img src="images/cam.png"  /></a>';
 		li.innerHTML += '<a id="' + users[i].userid + '-scr' + '" href="javascript:call(\''+ users[i].userid +'\', 4)" class="disabledlink"><img src="images/screen.png"  /></a>';
 		ul.appendChild(li);
+		refreshUserDeviceDOM(users[i].userid, users[i].username, users[i].cameraSharing, users[i].microphoneSharing, users[i].screenSharing);
 	}
 }
 
@@ -642,4 +699,5 @@ function refreshMessageListDOM(time, from, text, color) {
 		p.style.backgroundColor = color;
 	}
 	div.appendChild(p);
+	div.scrollTop = div.scrollHeight;
 }

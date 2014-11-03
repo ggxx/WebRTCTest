@@ -24,6 +24,7 @@ app.use('/', express.static(__dirname + '/public'));
 
 var rooms = []; //房间
 var users = []; //进入房间的用户
+var MAX_PERSONS_NUM_IN_ROOM = 2; //房间内最大用户数
 
 function removeRoom(roomid) {
 	var index = getRoomIndex(roomid);
@@ -142,11 +143,11 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 将candidate告知对方
-	// message.from => to whom
-	// message.to
+	// message.from => from whom
+	// message.to   => to whom
 	// candidate
 	// streamtype
-	// tag => offer tag
+	// tag => true:offer; false:answer
 	socket.on('candidate', function(message) {
 		log('candidate from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
@@ -226,12 +227,12 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 	// 有用户进入房间
-	socket.on('joinroom', function (user) {
+	socket.on('joinroom', function (message) {
 	
 		//log('client.roomid:' + client.roomid);
 		//log('user.roomid:' + user.roomid);
 	
-		if (client.userid !== '' && client.roomid !== '' && client.roomid !== user.roomid) {
+		if (client.userid !== '' && client.roomid !== '' && client.roomid !== message.roomid) {
 			var rMessage = {
 				result: false,
 				text: '请先从其它房间中退出',
@@ -240,7 +241,7 @@ io.sockets.on('connection', function (socket) {
 			socket.emit('joinroom', rMessage); // 反馈进入房间失败
 			return;
 		}
-		else if (client.userid !== '' && client.roomid !== '' && client.roomid === user.roomid) {
+		else if (client.userid !== '' && client.roomid !== '' && client.roomid === message.roomid) {
 			var rMessage = {
 				result: false,
 				text: '已进入该房间',
@@ -249,26 +250,36 @@ io.sockets.on('connection', function (socket) {
 			socket.emit('joinroom', rMessage); // 反馈进入房间失败
 			return;
 		}
+		
+		if (getUsersInRoom(message.roomid).length >= MAX_PERSONS_NUM_IN_ROOM) {
+			var rMessage = {
+				result: false,
+				text: '房间已达最大用户数',
+				room: { }
+			};
+			socket.emit('joinroom', rMessage); // 反馈进入房间失败
+			return;
+		}
 	
 		//初始化client
-		client.userid = user.userid;
-		client.username = user.username;
-		client.roomid = user.roomid;
+		client.userid = message.userid;
+		client.username = message.username;
+		client.roomid = message.roomid;
 		
 		// 维护全局变量
-		users.push(user);
+		users.push(client);
 		
 		// 将client加入room
-		socket.join(user.roomid);
+		socket.join(message.roomid);
 		
 		var rMessage = {
 			result: true,
 			text: '',
-			room: getRoom(user.roomid)
+			room: getRoom(message.roomid)
 		};
 		socket.emit('joinroom', rMessage); // 反馈房间进入成功
 		
-		io.sockets.in(user.roomid).emit('users', getUsersInRoom(user.roomid)); // 通知房间内所有用户有新人供吊打
+		io.sockets.in(message.roomid).emit('users', getUsersInRoom(message.roomid)); // 通知房间内所有用户有新人供吊打
 	});
 	
 	// 离开room
@@ -361,9 +372,12 @@ io.sockets.on('connection', function (socket) {
 		if (client.userid === '' || client.roomid === '') {
 			var rMessage = {
 				result: false,
+				time: getTime(),
+				from: '',
 				text: '未进入任何房间'
 			};
 			socket.emit('textmessage', rMessage);
+			return;
 		}
 		
 		var rMessage = {
