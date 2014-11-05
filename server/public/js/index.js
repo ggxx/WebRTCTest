@@ -401,6 +401,8 @@ function gotCamera(stream) {
 }
 
 function gotCameraError(error) {
+	//console.log('gotCameraError');
+	alert('共享摄像头失败');
 	stopSharingCamera();
 }
 
@@ -418,7 +420,8 @@ function gotScreen(stream) {
 }
 
 function gotScreenError(error) {
-	console.log('gotScreenError');
+	//console.log('gotScreenError');
+	alert('共享桌面失败');
 	stopSharingScreen();
 }
 
@@ -577,10 +580,13 @@ function buildRtcPeerConnection(id, type, isOffer) {
 		else {
 			remoteCameraStream = event.stream;
 			attachMediaStream(remoteCam, remoteCameraStream);
+			
+			// TODO: Mix Audio from remote stream & local mic
+			// TODO: Record video & audio to local disk, then upload to media-storage-server
+			
+			//var audioTracks = remoteCameraStream.getAudioTracks();
+			
 		}
-	
-		// TODO: Mix Audio from remote stream & local mic
-		// TODO: Record video & audio to local disk, then upload to media-storage-server
 	}
 	
 	function handleIceConnectionStateChange(event) {
@@ -624,7 +630,7 @@ function handleReadyStateChange(event) {
 }
 
 function onError(error){
-	//console.log('onError', error);
+	console.log('onError', error);
 }
 
 
@@ -721,9 +727,8 @@ function refreshMessageListDOM(time, from, text, color) {
 	div.scrollTop = div.scrollHeight;
 }
 
-// 折叠设置区域
+// 折叠区域
 function toggle() {
-	//console.log('toggle');
 	var div = document.getElementById('setting');
 	div.style.display = (div.style.display == "none") ? "block" : "none";
 }
