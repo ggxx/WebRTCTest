@@ -1,15 +1,18 @@
 html,body {
+	font-family: "Tahoma" "segoe UI" "Times New Roman";
 	margin: 0;
 	padding: 0;
 	height: 100%;
 	width: 100%;
+	background-color: #999;
 }
 
 #form {
-	background-color: #333;
+	background-color: #fff;
 	margin: 0 auto;
-	width: 100%;
-	height: 100%;
+	width: 1400px;
+	/*width: 100%;*/
+	/*height: 100%;*/
 	min-width: 980px;
 }
 
@@ -17,12 +20,12 @@ html,body {
 	color: #eee;
 	background-color: #333;
 	text-align: center;
-	height: 60px;
+	height: 80px;
 	border-bottom: 5px Solid #ddd;
 }
 
 #header h1 {
-	padding-top: 10px;
+	padding-top: 20px;
 	margin: 0;
 }
 
@@ -31,7 +34,7 @@ html,body {
 	float: left;  
 	color: #fff;
 	background-color: #8cf;
-	min-height: 800px;
+	min-height: 900px;
 }
 
 #rooms h2 {
@@ -156,7 +159,7 @@ html,body {
 	float: right;  
 	color: #fff;
 	background-color: #8cf;
-	min-height: 800px;
+	min-height: 900px;
 }
 
 #users h2 {
@@ -239,16 +242,16 @@ html,body {
 
 #content {
 	text-align: center;
-	position: relative;  
+	position: relative; 
 	background-color: #eee;
 	margin: 0 200px;
-	height: 800px;
-	min-width: 800px;
+	min-height: 900px;
+	/*min-width: 800px;*/
 }
 
 #videos {
 	margin: 0 auto;
-	width: 90%;
+	width: 1000px;
 }
 
 #video_main {
@@ -260,7 +263,7 @@ html,body {
 }
 
 #logs {
-	position: absolute; 
+	position: absolute;
 	bottom: 0; 
 	height: 200px; 
 	width: 100%; 
@@ -269,7 +272,7 @@ html,body {
 
 #messages {
 	text-align: left;
-	height: 170px;
+	height: 160px;
 	overflow: auto;
 }
 
@@ -289,10 +292,11 @@ html,body {
 }
 
 #footer {
+	font-size: 0.9em;
 	color: #eee;
 	clear: both;
 	background-color: #333;
-	height: 80px;
+	height: 60px;
 	overflow: hidden;
 	text-align: center;
 	padding-top: 15px;

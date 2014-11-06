@@ -41,7 +41,7 @@ settingHeader.onclick = toggle;
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.0.99');
+var socket = io.connect('https://192.168.0.115');
 socket.on('open', function() {
 
 	//console.log('服务器连接成功');
@@ -277,6 +277,8 @@ function leaveRoom() {
 	//console.log('leaveroom');
 	if (mediaStream) { mediaStream.stop(); }
 	if (screenStream) { screenStream.stop(); }
+	if (remoteCameraStream) { remoteCameraStream.stop(); }
+	if (remoteScreenStream) { remoteScreenStream.stop(); }
 	
 	//console.log('send socket message: leaveroom');
 	socket.emit('leaveroom');
@@ -586,6 +588,8 @@ function buildRtcPeerConnection(id, type, isOffer) {
 			
 			//var audioTracks = remoteCameraStream.getAudioTracks();
 			
+			
+			
 		}
 	}
 	
@@ -600,7 +604,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 					rtcPeerConnection.removeStream(remoteScreenStream);
 					remoteScreenStream.stop();
 					remoteScreenStream = null;
-				} 
+				}
 			}
 			else if (type >= 1 && type <= 3) {
 				if (mediaStream) {
@@ -612,6 +616,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 					remoteCameraStream = null;
 				}
 			}
+			//rtcPeerConnection.close();
 		}
 	}
 	
