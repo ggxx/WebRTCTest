@@ -254,14 +254,6 @@ html,body {
 	width: 1000px;
 }
 
-#video_main {
-	background-color: Blue;
-}
-
-#video_right {
-	background-color: Green;
-}
-
 #logs {
 	position: absolute;
 	bottom: 0; 

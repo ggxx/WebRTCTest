@@ -133,7 +133,7 @@ io.sockets.on('connection', function (socket) {
 	// message.to
 	// message.streamtype => 1.cam & mic; 2.screen; 3.screen & cam & mic
 	socket.on('call', function(message) {
-		log('call from ' + message.from + ' to ' + message.to);
+		log('receive call message from ' + message.from + ' to ' + message.to);
 		// 遍历找到该用户并回复之
 		io.sockets.clients().forEach(function (socketClient) {
 			if (socketClient.name === message.to) {
@@ -149,7 +149,7 @@ io.sockets.on('connection', function (socket) {
 	// streamtype
 	// tag => true:offer; false:answer
 	socket.on('candidate', function(message) {
-		log('candidate from ' + message.from + ' to ' + message.to);
+		log('receive candidate message from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
 			if (socketClient.name === message.to) {
 				socketClient.emit('candidate', message);
@@ -163,7 +163,7 @@ io.sockets.on('connection', function (socket) {
 	// message.to
 	// message.streamtype
 	socket.on('answer', function(message) {
-		log('answer from ' + message.from + ' to ' + message.to);
+		log('receive answer message from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
 			if (socketClient.name === message.to) {
 				socketClient.emit('answer', message);
@@ -177,7 +177,7 @@ io.sockets.on('connection', function (socket) {
 	// message.to
 	// message.streamtype
 	socket.on('offer', function(message) {
-		log('offer from ' + message.from + ' to ' + message.to);
+		log('receive offer message from ' + message.from + ' to ' + message.to);
 		io.sockets.clients().forEach(function (socketClient) {
 			if (socketClient.name === message.to) {
 				socketClient.emit('offer', message);

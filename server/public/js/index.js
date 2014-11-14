@@ -41,7 +41,7 @@ settingHeader.onclick = toggle;
 
 ///--------------SOCKET.IO------------------
 
-var socket = io.connect('https://192.168.0.115');
+var socket = io.connect('https://192.168.2.102');
 socket.on('open', function() {
 
 	//console.log('服务器连接成功');
@@ -134,7 +134,7 @@ socket.on('open', function() {
 	// to
 	// streamtype => 1.camera, 2.microphone, 3.cam & mic, 4.screen
 	socket.on('call', function(message) {
-		//console.log('socket on call');
+		console.log('receive call message from' + message.from);
 		
 		if (message.streamtype === 1 || message.streamtype === 2 || message.streamtype === 3) {
 			if (!mediaStream) {
@@ -175,7 +175,7 @@ socket.on('open', function() {
 	// streamtype
 	// tag
 	socket.on('candidate', function(message) {
-		//console.log('socket on candidate');
+		console.log('receive candidate message from ' + message.from);
 		var candidate = new RTCIceCandidate({
 			sdpMLineIndex: message.candidate.sdpMLineIndex,
 			candidate: message.candidate.candidate
@@ -188,8 +188,9 @@ socket.on('open', function() {
 	// sdp
 	// streamtype
 	socket.on('offer', function(message) {
-		//console.log('socket on offer');
+		console.log('receive offer message from ' + message.from);
 		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, false);
+		console.log('setRemoteDescription');
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp), rtcPeerConnection.onremotesdpset, onError);
 	});
 	
@@ -198,8 +199,9 @@ socket.on('open', function() {
 	// sdp
 	// streamtype
 	socket.on('answer', function(message) {
-		//console.log('socket on answer');
+		console.log('receive answer message from ' + message.from);
 		var rtcPeerConnection = getRTCPeerConnection(message.from, message.streamtype, true);
+		console.log('setRemoteDescription');
 		rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
 	});
 	
@@ -327,7 +329,7 @@ function call(userid, type) {
 	var tmp = (type === 4) ? '-answer-screen' : '-answer-media';
 	rtcPeerConnections[userid + tmp] = buildRtcPeerConnection(userid, type, false);
 	
-	//console.log('send socket message: call');
+	console.log('send call message to ' + message.to);
 	socket.emit('call', message);
 }
 
@@ -399,6 +401,7 @@ function gotCamera(stream) {
 		cameraSharing: true,
 		microphoneSharing: true
 	};
+	console.log('send sharecam message');
 	socket.emit('sharecam', rMessage);
 }
 
@@ -418,6 +421,7 @@ function gotScreen(stream) {
 		userid: USER_ID,
 		screenSharing: true
 	};
+	console.log('send sharescreen message');
 	socket.emit('sharescreen', rMessage);
 }
 
@@ -491,8 +495,6 @@ var offerConstraints = {
 };
 
 var rtcPeerConnections = { };
-var offerSDPs = { };
-var answerSDPs = { };
 
 function getRTCPeerConnection(id, type, isOffer) {
 	var tmp1 = (isOffer === true) ? '-offer' : '-answer';
@@ -515,7 +517,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 	
 	
 	function handleIceCandidate(event) {
-		//console.log('handleIceCandidate event');
+		console.log('handleIceCandidate event');
 		if (event.candidate) {
 			var candidate = {
 				sdpMLineIndex: event.candidate.sdpMLineIndex,
@@ -527,6 +529,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 				streamtype: type,
 				tag: rtcPeerConnection.isoffer
 			};
+			console.log('send candidate message to '+ rMessage.to);
 			socket.emit('candidate', rMessage);
 		} else {
 			console.log('End of candidates.');
@@ -536,6 +539,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 	function onOfferCreated(sdp) {
 		//console.log('onOfferCreated');
 		rtcPeerConnection.offerSDP = sdp;
+		console.log('setLocalDescription');
 		rtcPeerConnection.setLocalDescription(sdp, onOfferSDPSet, onError);
 	}
 	
@@ -547,6 +551,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 	function onAnswerCreated(sdp) {
 		//console.log('onAnswerCreated');
 		rtcPeerConnection.answerSDP = sdp;
+		console.log('setLocalDescription');
 		rtcPeerConnection.setLocalDescription(sdp, onAnswerSDPSet, onError);
 	}
 	
@@ -558,7 +563,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 			sdp: rtcPeerConnection.offerSDP,
 			streamtype: type
 		};
-		console.log('send socket message: offer');
+		console.log('send offer message to ' + message.to);
 		socket.emit('offer', message);
 	}
 
@@ -569,7 +574,7 @@ function buildRtcPeerConnection(id, type, isOffer) {
 			sdp: rtcPeerConnection.answerSDP,
 			streamtype: type
 		};
-		//console.log('send socket message: answer');
+		console.log('send answer message to ' + message.to);
 		socket.emit('answer', message);
 	}
 	
