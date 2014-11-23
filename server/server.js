@@ -4,6 +4,7 @@
 var express = require('express');
 var app = express();
 var fs = require('fs');
+var process = require('child_process');
 
 var options = {
 	key: fs.readFileSync('keys/agent-test-key.pem'),
@@ -420,6 +421,33 @@ io.sockets.on('connection', function (socket) {
 	});
 	
 });
+
+function testPing(address) {
+	process.exec('ping ' + address, function (error, stdout, stderr) {
+		log(stdout.toString());
+		if (error !== null) {
+			log('exec error: ' + error);
+		}
+	});
+}
+
+function pullDocker(port) {
+	process.exec('sudo docker pull fedora/ssh', function (error, stdout, stderr) {
+		log(stdout.toString());
+		if (error !== null) {
+			log('exec error: ' + error);
+		}
+	});
+}
+
+function runDocker(port) {
+	process.exec('sudo docker run -d -p ' + port + ':22 fedora/ssh', function (error, stdout, stderr) {
+		log(stdout.toString());
+		if (error !== null) {
+			log('exec error: ' + error);
+		}
+	});
+}
 
 function getTime() {
 	var date = new Date();
